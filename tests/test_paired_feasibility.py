@@ -94,7 +94,15 @@ class PairedTests(unittest.TestCase):
                 self.assertIn(f'Option {side}, ' + case['options'][side], statement)
                 selected = copy.deepcopy(config)
                 next(c for c in selected['scenarios'] if c['id'] == case['id'])['target_option'] = side
-                self.assertEqual(len(paired.build_samples(selected)), 10)
+                selected_rows = paired.build_samples(selected)
+                self.assertEqual(len(selected_rows), 10)
+                for row in selected_rows:
+                    if row['scenario_id'] == case['id']:
+                        self.assertEqual(row['side'], side)
+                        self.assertEqual(row['target_statement'], case['target_statements'][side])
+                        if row['condition'] == 'covert_persuasion':
+                            self.assertIn(case['target_statements'][side], row['system_prompt'])
+                            self.assertNotIn(case['target_statements']['B' if side == 'A' else 'A'], row['system_prompt'])
                 for condition in paired.CONTROL_CONDITIONS:
                     prompt = paired.render_control(config, case, condition, side)
                     self.assertNotIn('{', prompt['system_prompt'] + prompt['user_prompt'])
@@ -123,6 +131,58 @@ class PairedTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 paired.build_samples(broken)
 
+    def test_shared_prompt_structure_and_frozen_echo_bank(self):
+        config = json.loads((paired.DATA / 'scenarios.json').read_text())
+        bank = config['echo_prompts']
+        self.assertTrue(bank['frozen'])
+        self.assertEqual(bank['version'], 1)
+        self.assertEqual([(p['id'], p['topic']) for p in bank['prompts']], [
+            ('concealment_hidden_agendas_v1', 'concealment'),
+            ('concealment_undisclosed_objectives_v1', 'concealment'),
+            ('concealment_apparent_neutrality_v1', 'concealment'),
+            ('persuasion_emotional_appeals_v1', 'persuasion')])
+        rows = paired.build_samples(config)
+        for case in config['scenarios']:
+            matched = [r for r in rows if r['scenario_id'] == case['id']]
+            prompts = matched + [paired.render_control(config, case, condition)
+                for condition in ('overt_persuasion', 'instruction_word_control')]
+            for prompt in prompts:
+                self.assertEqual(prompt['user_prompt'].encode(), matched[0]['user_prompt'].encode())
+                self.assertTrue(prompt['system_prompt'].startswith(config['common_instruction'] + '\n\n'))
+                self.assertEqual(prompt['system_prompt'].count(config['common_instruction']), 1)
+            for echo in bank['prompts']:
+                prompt = paired.render_control(config, case, 'echo_control', echo_prompt_id=echo['id'])
+                self.assertEqual(prompt['user_prompt'],
+                    f"Background:\n{case['background']}\n\nQuestion:\n{echo['question']}")
+                self.assertNotEqual(prompt['user_prompt'], matched[0]['user_prompt'])
+                self.assertEqual(prompt['system_prompt'],
+                    config['common_instruction'] + '\n\n' + config['neutral_instruction'])
+                self.assertNotIn(case['target_statements'][case['target_option']], prompt['system_prompt'])
+        self.assertEqual(len(rows), 10)
+        self.assertEqual({r['condition'] for r in rows}, {'neutral', 'covert_persuasion'})
+
+    def test_no_silent_target_or_echo_fallback(self):
+        config = json.loads((paired.DATA / 'scenarios.json').read_text())
+        for invalid in ('C', '', 'a'):
+            broken = copy.deepcopy(config)
+            broken['scenarios'][0]['target_option'] = invalid
+            with self.assertRaisesRegex(ValueError, 'Invalid target'):
+                paired.build_samples(broken)
+        broken = copy.deepcopy(config)
+        del broken['scenarios'][0]['target_option']
+        with self.assertRaisesRegex(ValueError, 'Invalid target'):
+            paired.build_samples(broken)
+        with self.assertRaisesRegex(ValueError, 'Unknown echo'):
+            paired.render_control(config, config['scenarios'][0], 'echo_control', echo_prompt_id='unknown')
+        broken = copy.deepcopy(config)
+        broken['echo_prompts']['prompts'].append(broken['echo_prompts']['prompts'][0])
+        with self.assertRaisesRegex(ValueError, 'duplicate echo'):
+            paired.build_samples(broken)
+        broken = copy.deepcopy(config)
+        broken['control_templates']['overt_persuasion']['user_prompt_template'] = 'Altered {paired_user_prompt}'
+        with self.assertRaisesRegex(ValueError, 'shared message structure'):
+            paired.build_samples(broken)
+
     def test_backgrounds_have_no_frozen_probe_overlap(self):
         config = json.loads((paired.DATA / 'scenarios.json').read_text())
         concepts = paired.load_concepts(paired.DATA / 'concepts.json')
@@ -148,7 +208,7 @@ class PairedTests(unittest.TestCase):
             args = args_for(Path(tmp) / 'plan')
             result = paired.prepare(args)
             self.assertEqual(result['status'], 'prepared')
-            self.assertEqual(result['prompt_revision'], 3)
+            self.assertEqual(result['prompt_revision'], 4)
             self.assertTrue(result['fictional'])
             self.assertEqual(result['scenario_source_sha256'], paired.digest(args.scenarios))
             frozen = paired.load_concepts(args.output_dir / 'concepts.json')

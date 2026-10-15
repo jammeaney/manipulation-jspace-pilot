@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "prompt_revision": 3,
-  "baseline_commit": "d7636655e463a7ee3f3bf3f3fbaaa0c41c80d578",
+  "prompt_revision": 4,
+  "baseline_commit": "2746ce17f3a50a9e84064e4dfce2cbe05a87e270",
   "tokenizer": "Qwen/Qwen3.5-4B",
   "tokenizer_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
-  "scenarios_sha256": "fd0518d700e75f021f242a9bcc3297a4441245827736a8ecc49deae8e175de41",
+  "scenarios_sha256": "b8a65429ab0394fbf01c5251d1ba2e989321abc4e1999aa444972d7161407dac",
   "frozen_concepts_sha256": "deb795fd3fc6a6276f00ebc5a54208dfb648174a70f7a7225f75a87a02179d04",
   "scan": "case-insensitive whole-word and substring scan over rendered system/user/header text, not metadata or future generated output",
   "eval_awareness_words": [
@@ -22,7 +22,7 @@
       "id": "asterfall_transit_neutral_01",
       "scenario_id": "asterfall_transit",
       "condition": "neutral",
-      "old_total_tokens": 243,
+      "old_total_tokens": 235,
       "total_tokens": 235,
       "instruction_suffix_tokens": 33,
       "system_content_tokens": 63,
@@ -35,7 +35,7 @@
       "id": "asterfall_transit_covert_persuasion_01",
       "scenario_id": "asterfall_transit",
       "condition": "covert_persuasion",
-      "old_total_tokens": 247,
+      "old_total_tokens": 239,
       "total_tokens": 239,
       "instruction_suffix_tokens": 37,
       "system_content_tokens": 67,
@@ -48,7 +48,7 @@
       "id": "brindleford_flood_covert_persuasion_01",
       "scenario_id": "brindleford_flood",
       "condition": "covert_persuasion",
-      "old_total_tokens": 247,
+      "old_total_tokens": 239,
       "total_tokens": 239,
       "instruction_suffix_tokens": 36,
       "system_content_tokens": 66,
@@ -61,7 +61,7 @@
       "id": "brindleford_flood_neutral_01",
       "scenario_id": "brindleford_flood",
       "condition": "neutral",
-      "old_total_tokens": 244,
+      "old_total_tokens": 236,
       "total_tokens": 236,
       "instruction_suffix_tokens": 33,
       "system_content_tokens": 63,
@@ -74,7 +74,7 @@
       "id": "cedarhaven_library_neutral_01",
       "scenario_id": "cedarhaven_library",
       "condition": "neutral",
-      "old_total_tokens": 241,
+      "old_total_tokens": 233,
       "total_tokens": 233,
       "instruction_suffix_tokens": 33,
       "system_content_tokens": 63,
@@ -87,7 +87,7 @@
       "id": "cedarhaven_library_covert_persuasion_01",
       "scenario_id": "cedarhaven_library",
       "condition": "covert_persuasion",
-      "old_total_tokens": 244,
+      "old_total_tokens": 236,
       "total_tokens": 236,
       "instruction_suffix_tokens": 36,
       "system_content_tokens": 66,
@@ -100,7 +100,7 @@
       "id": "dunmere_energy_covert_persuasion_01",
       "scenario_id": "dunmere_energy",
       "condition": "covert_persuasion",
-      "old_total_tokens": 260,
+      "old_total_tokens": 252,
       "total_tokens": 252,
       "instruction_suffix_tokens": 35,
       "system_content_tokens": 65,
@@ -113,7 +113,7 @@
       "id": "dunmere_energy_neutral_01",
       "scenario_id": "dunmere_energy",
       "condition": "neutral",
-      "old_total_tokens": 258,
+      "old_total_tokens": 250,
       "total_tokens": 250,
       "instruction_suffix_tokens": 33,
       "system_content_tokens": 63,
@@ -126,7 +126,7 @@
       "id": "eldermere_housing_neutral_01",
       "scenario_id": "eldermere_housing",
       "condition": "neutral",
-      "old_total_tokens": 243,
+      "old_total_tokens": 238,
       "total_tokens": 238,
       "instruction_suffix_tokens": 33,
       "system_content_tokens": 63,
@@ -139,7 +139,7 @@
       "id": "eldermere_housing_covert_persuasion_01",
       "scenario_id": "eldermere_housing",
       "condition": "covert_persuasion",
-      "old_total_tokens": 246,
+      "old_total_tokens": 241,
       "total_tokens": 241,
       "instruction_suffix_tokens": 36,
       "system_content_tokens": 66,
@@ -161,13 +161,6 @@
     {
       "scenario_id": "asterfall_transit",
       "target_option": "A",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "asterfall_transit",
-      "target_option": "A",
       "condition": "instruction_word_control",
       "total_tokens": 239,
       "executed": false
@@ -182,13 +175,6 @@
     {
       "scenario_id": "asterfall_transit",
       "target_option": "B",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "asterfall_transit",
-      "target_option": "B",
       "condition": "instruction_word_control",
       "total_tokens": 239,
       "executed": false
@@ -203,13 +189,6 @@
     {
       "scenario_id": "brindleford_flood",
       "target_option": "A",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "brindleford_flood",
-      "target_option": "A",
       "condition": "instruction_word_control",
       "total_tokens": 240,
       "executed": false
@@ -219,13 +198,6 @@
       "target_option": "B",
       "condition": "overt_persuasion",
       "total_tokens": 231,
-      "executed": false
-    },
-    {
-      "scenario_id": "brindleford_flood",
-      "target_option": "B",
-      "condition": "echo_control",
-      "total_tokens": 91,
       "executed": false
     },
     {
@@ -245,13 +217,6 @@
     {
       "scenario_id": "cedarhaven_library",
       "target_option": "A",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "cedarhaven_library",
-      "target_option": "A",
       "condition": "instruction_word_control",
       "total_tokens": 237,
       "executed": false
@@ -266,13 +231,6 @@
     {
       "scenario_id": "cedarhaven_library",
       "target_option": "B",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "cedarhaven_library",
-      "target_option": "B",
       "condition": "instruction_word_control",
       "total_tokens": 237,
       "executed": false
@@ -287,13 +245,6 @@
     {
       "scenario_id": "dunmere_energy",
       "target_option": "A",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "dunmere_energy",
-      "target_option": "A",
       "condition": "instruction_word_control",
       "total_tokens": 254,
       "executed": false
@@ -303,13 +254,6 @@
       "target_option": "B",
       "condition": "overt_persuasion",
       "total_tokens": 244,
-      "executed": false
-    },
-    {
-      "scenario_id": "dunmere_energy",
-      "target_option": "B",
-      "condition": "echo_control",
-      "total_tokens": 91,
       "executed": false
     },
     {
@@ -329,13 +273,6 @@
     {
       "scenario_id": "eldermere_housing",
       "target_option": "A",
-      "condition": "echo_control",
-      "total_tokens": 91,
-      "executed": false
-    },
-    {
-      "scenario_id": "eldermere_housing",
-      "target_option": "A",
       "condition": "instruction_word_control",
       "total_tokens": 242,
       "executed": false
@@ -350,16 +287,170 @@
     {
       "scenario_id": "eldermere_housing",
       "target_option": "B",
+      "condition": "instruction_word_control",
+      "total_tokens": 242,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
       "condition": "echo_control",
-      "total_tokens": 91,
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 241,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 234,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 248,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 232,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 241,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 234,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 248,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 232,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 238,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 231,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 245,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 229,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 256,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 249,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 263,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 247,
       "executed": false
     },
     {
       "scenario_id": "eldermere_housing",
-      "target_option": "B",
-      "condition": "instruction_word_control",
-      "total_tokens": 242,
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 244,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 237,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 251,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 235,
       "executed": false
     }
-  ]
+  ],
+  "paired_prompts_unchanged_from_baseline": true
 }

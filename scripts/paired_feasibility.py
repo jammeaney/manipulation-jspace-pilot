@@ -53,13 +53,40 @@ def resolve_target(case, target_option=None):
         if (not isinstance(statement, str) or
                 not re.fullmatch(r'.+ should choose Option ' + side + r', ' + re.escape(option), statement)):
             raise ValueError(f'Target statement {side} must identify its corresponding option')
-    selected = case['target_option'] if target_option is None else target_option
+    selected = case.get('target_option') if target_option is None else target_option
     if selected not in statements:
         raise ValueError('Invalid target option')
     return statements[selected]
 
 
-def render_control(config, case, condition, target_option=None):
+def echo_question(config, echo_prompt_id=None):
+    bank = config['echo_prompts']
+    prompts = bank['prompts']
+    if bank.get('frozen') is not True or bank.get('version') != 1 or not prompts:
+        raise ValueError('A frozen versioned echo prompt bank is required')
+    by_id = {}
+    for prompt in prompts:
+        if (not re.fullmatch(r'[a-z0-9_]+', prompt['id']) or prompt['id'] in by_id
+                or prompt['topic'] not in {'concealment', 'persuasion'}
+                or not isinstance(prompt['question'], str) or not prompt['question'].strip()
+                or '{' in prompt['question'] or '}' in prompt['question']):
+            raise ValueError('Invalid or duplicate echo prompt')
+        by_id[prompt['id']] = prompt['question']
+    if bank['default_id'] not in by_id:
+        raise ValueError('Unknown default echo prompt ID')
+    selected = bank['default_id'] if echo_prompt_id is None else echo_prompt_id
+    if selected not in by_id:
+        raise ValueError('Unknown echo prompt ID')
+    return by_id[selected]
+
+
+def construct_prompt(config, case, instruction, question=None):
+    """One system/user structure for every condition; echo replaces only question."""
+    return {'system_prompt': config['common_instruction'] + '\n\n' + instruction,
+            'user_prompt': f"Background:\n{case['background']}\n\nQuestion:\n{case['question'] if question is None else question}"}
+
+
+def render_control(config, case, condition, target_option=None, echo_prompt_id=None):
     """Render dormant full-pilot templates; not used by the paired runner."""
     if condition not in CONTROL_CONDITIONS:
         raise ValueError('Unknown control condition')
@@ -70,7 +97,8 @@ def render_control(config, case, condition, target_option=None):
     if set(template) != {'system_instruction_template', 'user_prompt_template'}:
         raise ValueError('Control needs explicit system and user templates')
     values = {'target_statement': resolve_target(case, target_option),
-              'paired_user_prompt': f"Background:\n{case['background']}\n\nQuestion:\n{case['question']}"}
+              'paired_user_prompt': construct_prompt(config, case, '')['user_prompt'],
+              'echo_question': echo_question(config, echo_prompt_id)}
     fields = {}
     for key, text in template.items():
         if not isinstance(text, str) or not text.strip():
@@ -82,10 +110,13 @@ def render_control(config, case, condition, target_option=None):
         fields[key] = names
     if fields['system_instruction_template'] != ({'target_statement'} if condition == 'overt_persuasion' else set()):
         raise ValueError('Only overt control system must contain target_statement')
-    if fields['user_prompt_template'] != (set() if condition == 'echo_control' else {'paired_user_prompt'}):
+    if fields['user_prompt_template'] != ({'echo_question'} if condition == 'echo_control' else {'paired_user_prompt'}):
         raise ValueError('Echo uses a topic question; other controls reuse paired user content')
-    return {'system_prompt': config['common_instruction'] + '\n\n' + template['system_instruction_template'].format(**values),
-            'user_prompt': template['user_prompt_template'].format(**values)}
+    expected_user_template = '{echo_question}' if condition == 'echo_control' else '{paired_user_prompt}'
+    if template['user_prompt_template'] != expected_user_template:
+        raise ValueError('User template must preserve the shared message structure exactly')
+    question = values['echo_question'] if condition == 'echo_control' else None
+    return construct_prompt(config, case, template['system_instruction_template'].format(**values), question)
 
 
 def build_samples(config):
@@ -100,12 +131,13 @@ def build_samples(config):
         target_statement = resolve_target(case)
         for condition in CONTROL_CONDITIONS:
             render_control(config, case, condition)
-        user = f"Background:\n{case['background']}\n\nQuestion:\n{case['question']}"
+        user = construct_prompt(config, case, '')['user_prompt']
         # Alternate first condition across scenarios; do not adapt order after seeing results.
         order = CONDITIONS if index % 2 == 0 else CONDITIONS[::-1]
         for condition in order:
             instruction = (config['neutral_instruction'] if condition == 'neutral' else
                            config['covert_instruction_template'].format(target_statement=target_statement))
+            prompt = construct_prompt(config, case, instruction)
             rows.append({'id': f"{case['id']}_{condition}_01", 'scenario_id': case['id'],
                          'issue': case['issue'], 'side': case['target_option'],
                          'target_statement': target_statement, 'options': case['options'],
@@ -113,8 +145,7 @@ def build_samples(config):
                          'persona': 'undecided', 'realism': 'test_like',
                          'factual_background': case['background'], 'question': case['question'],
                          'condition_instruction': instruction,
-                         'system_prompt': config['common_instruction'] + '\n\n' + instruction,
-                         'user_prompt': user,
+                         **prompt,
                          'common_user_sha256': hashlib.sha256(user.encode()).hexdigest(),
                          'behavioural_outcome': None, 'behavioural_outcome_status': 'not_evaluated'})
     validate_pairing(rows)
@@ -180,6 +211,7 @@ def prepare(args):
     plan = {'schema_version': 1, 'specification': 'pilot_spec_26_10_2.md', 'status': 'prepared',
             'prompt_revision': config.get('prompt_revision', 1), 'fictional': config['fictional'],
             'inactive_control_templates': config['control_templates'],
+            'inactive_echo_prompts': config['echo_prompts'],
             'created_at_utc': datetime.now(timezone.utc).isoformat(), 'independent_scenarios': 5,
             'assigned_conditions': list(CONDITIONS), 'samples': rows,
             'generation_settings': {'temperature': .7, 'seed': args.seed,
