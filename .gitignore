@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Model caches and weights
+.cache/
+*.safetensors
+*.pt
+*.pth
+
+# Generated experiment outputs
+outputs/
+logs/
+*.eval
+*.parquet
+
+# Secrets
+.env
+.env.*
+*.pem
