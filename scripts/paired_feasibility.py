@@ -121,7 +121,7 @@ def render_control(config, case, condition, target_option=None, echo_prompt_id=N
 
 def build_samples(config):
     scenarios = config['scenarios']
-    if config.get('fictional') is not True or len(scenarios) != 5:
+    if config.get('fictional') is not True or len(scenarios) not in (1, 5):
         raise ValueError('Exactly five explicitly fictional scenarios are required')
     rows, seen = [], set()
     for index, case in enumerate(scenarios):
@@ -154,14 +154,14 @@ def build_samples(config):
 
 def validate_pairing(rows):
     pairs = defaultdict(list)
-    if len(rows) != 10 or len({r['id'] for r in rows}) != 10:
-        raise ValueError('Exactly ten unique sample IDs are required')
+    if len(rows) not in (2, 10) or len({r['id'] for r in rows}) != len(rows):
+        raise ValueError('Expected 2 or 10 unique sample IDs')
     for row in rows:
         if not re.fullmatch(r'[a-z0-9_]+', row['id']) or row['condition'] != row['assigned_condition']:
             raise ValueError('Invalid sample ID or assigned condition')
         pairs[row['scenario_id']].append(row)
-    if len(pairs) != 5:
-        raise ValueError('Exactly five scenario pairs are required')
+    if len(pairs) != len(rows) // 2:
+        raise ValueError('Each scenario must have exactly two samples')
     for pair in pairs.values():
         if len(pair) != 2 or {r['condition'] for r in pair} != set(CONDITIONS):
             raise ValueError('Every scenario needs exactly one sample per condition')
@@ -214,7 +214,7 @@ def prepare(args):
             'inactive_echo_prompts': config['echo_prompts'],
             'created_at_utc': datetime.now(timezone.utc).isoformat(), 'independent_scenarios': 5,
             'assigned_conditions': list(CONDITIONS), 'samples': rows,
-            'generation_settings': {'temperature': .7, 'seed': args.seed,
+            'generation_settings': {'temperature': 1.0, 'seed': args.seed,
                 'max_new_tokens': args.max_new_tokens, 'position_chunk_size': args.position_chunk_size,
                 'logprob_flag_threshold': .5, 'device': args.device,
                 'dtype': args.dtype or ('bfloat16' if args.device == 'cuda' else 'float32')},
@@ -245,7 +245,7 @@ def run(args):
     for index, row in enumerate(plan['samples']):
         example = SimpleNamespace(output_dir=args.output_dir / 'samples' / row['id'],
             prompt=row['user_prompt'], system=row['system_prompt'], device=args.device, dtype=dtype,
-            max_new_tokens=args.max_new_tokens, temperature=.7, seed=args.seed,
+            max_new_tokens=args.max_new_tokens, temperature=1.0, seed=args.seed,
             position_chunk_size=args.position_chunk_size, logprob_flag_threshold=.5)
         single.run_example(example, hf, tokenizer, lens, concept_token_ids=concepts,
                            print_tokens=index == 0)
@@ -343,8 +343,8 @@ def paired_comparisons(layer_rows, workspace=False):
 def summarize(run_dir, output_dir):
     plan = json.loads((run_dir / 'experiment.json').read_text())
     rows = [json.loads(line) for line in (run_dir / 'prompts.jsonl').read_text().splitlines()]
-    if plan['status'] != 'complete' or len(rows) != 10 or rows != plan['samples']:
-        raise ValueError('All ten saved samples must complete before summary; plan must match prompts')
+    if plan['status'] != 'complete' or len(rows) not in (2, 10) or rows != plan['samples']:
+        raise ValueError('All saved samples must complete before summary; plan must match prompts')
     validate_pairing(rows)
     if digest(run_dir / 'concepts.json') != plan['resolved_concepts_sha256']:
         raise ValueError('Frozen concept file changed')

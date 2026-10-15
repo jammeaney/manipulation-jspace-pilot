@@ -57,10 +57,12 @@ def prepare_prompt(tokenizer, system, user):
 
 @torch.inference_mode()
 def generate_one(hf, prompt_ids, max_new_tokens, temperature, seed, eos_ids):
-    """Raw HF logits -> temperature sampling; retain only the sampled scalar lp.
+    """Sample with Qwen thinking-mode settings; preserve raw log probabilities.
 
-    Batch size one, no padding, top_p=1, top_k=0, no penalties/processors.
-    KV caching is explicit. No full-vocabulary logits history is retained.
+    Sampling: temperature=1.0, top_k=20, top_p=0.95,
+    presence_penalty=1.5, repetition_penalty=1.0.
+
+    Recorded log probabilities use unmodified model logits.
     """
     hf.eval()
     device = hf.get_input_embeddings().weight.device
@@ -68,24 +70,83 @@ def generate_one(hf, prompt_ids, max_new_tokens, temperature, seed, eos_ids):
     next_input = torch.tensor([prompt_ids], dtype=torch.long, device=device)
     cache = None
     generated, logprobs = [], []
+
+    top_k = 20
+    top_p = 0.95
+    presence_penalty = 1.5
+
+    # Presence penalty applies to previously generated tokens.
+    seen_tokens = set()
+
     for step in range(max_new_tokens):
-        attention_mask = torch.ones((1, len(prompt_ids) + step), dtype=torch.long, device=device)
-        output = hf(input_ids=next_input, attention_mask=attention_mask,
-                    past_key_values=cache, use_cache=True, logits_to_keep=1)
+        attention_mask = torch.ones(
+            (1, len(prompt_ids) + step),
+            dtype=torch.long,
+            device=device,
+        )
+
+        output = hf(
+            input_ids=next_input,
+            attention_mask=attention_mask,
+            past_key_values=cache,
+            use_cache=True,
+            logits_to_keep=1,
+        )
         cache = output.past_key_values
+
         if cache is None:
             raise ValueError("Model did not return a generation cache")
+
         raw = output.logits[0, -1].float()
+
         if not torch.isfinite(raw).all():
             raise ValueError("Non-finite generation logits")
-        sampled = torch.multinomial(torch.softmax(raw / temperature, dim=-1), 1,
-                                    generator=generator)
-        token = sampled.item()
-        logprobs.append((raw[token] - raw.logsumexp(-1)).item())
+
+        # Preserve raw-model log probabilities for replay.
+        raw_logprobs = raw - raw.logsumexp(dim=-1)
+
+        # Apply sampling adjustments to a separate tensor.
+        logits = raw.clone()
+
+        if seen_tokens:
+            indices = torch.tensor(
+                list(seen_tokens), dtype=torch.long, device=device
+            )
+            logits[indices] -= presence_penalty
+
+        logits /= temperature
+
+        # Top-k filtering.
+        top_values, top_indices = torch.topk(logits, k=top_k)
+
+        # Top-p filtering within the top-k candidates.
+        sorted_values, order = torch.sort(top_values, descending=True)
+        sorted_indices = top_indices[order]
+
+        probabilities = torch.softmax(sorted_values, dim=-1)
+        cumulative = probabilities.cumsum(dim=-1)
+
+        remove = (cumulative - probabilities) >= top_p
+        sorted_values[remove] = float("-inf")
+
+        probabilities = torch.softmax(sorted_values, dim=-1)
+
+        selected = torch.multinomial(
+            probabilities, 1, generator=generator
+        )
+        token = sorted_indices[selected].item()
+
+        logprobs.append(raw_logprobs[token].item())
         generated.append(token)
+        seen_tokens.add(token)
+
         if token in eos_ids:
             return generated, logprobs, "eos"
-        next_input = sampled.reshape(1, 1)
+
+        next_input = torch.tensor(
+            [[token]], dtype=torch.long, device=device
+        )
+
     return generated, logprobs, "max_new_tokens"
 
 
@@ -338,12 +399,14 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
     args.output_dir.mkdir(parents=True, exist_ok=False)
     metadata = provenance(args.device, dtype)
     settings = {"max_new_tokens": args.max_new_tokens, "temperature": args.temperature,
-                "seed": args.seed, "do_sample": True, "top_p": 1.0, "top_k": 0,
+                "seed": args.seed, "do_sample": True, "top_p": 0.95,
+                "top_k": 20, "presence_penalty": 1.5, "repetition_penalty": 1.0,
+                "presence_penalty_scope": "generated_tokens_only",
                 "batch_size": 1, "enable_thinking": True, "use_cache": True,
-                "logprob_basis": "raw model logits before temperature; natural logarithm",
+                "logprob_basis": "raw model logits before sampling adjustments; natural logarithm",
                 "position_chunk_size": args.position_chunk_size,
                 "logprob_flag_threshold": args.logprob_flag_threshold,
-                "penalties_and_other_logits_processors": "none"}
+                "penalties_and_other_logits_processors": "presence penalty, top-k, top-p"}
     manifest = {"schema_version": 1, "created_at_utc": datetime.now(timezone.utc).isoformat(),
                 "status": "initializing", "provenance": metadata, "generation_settings": settings}
     if concept_token_ids is not None:
