@@ -1,7 +1,9 @@
 # Python >=3.10 (validated with Python 3.12).
 # Install a hardware-appropriate PyTorch wheel first; the CPU wheel satisfies this pin.
 torch==2.14.1
+# Match the Torch wheel family (CPU/CUDA); fixes the reported torchvision::nms import error.
+torchvision==0.29.1
 transformers==5.5.4
-accelerate>=1.0,<2
+accelerate==1.15.0
 jlens @ git+https://github.com/anthropics/jacobian-lens.git@581d398613e5602a5af361e1c34d3a92ea82ba8e
 inspect-ai==0.3.280
