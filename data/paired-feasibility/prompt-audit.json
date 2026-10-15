@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "prompt_revision": 4,
+  "baseline_commit": "2746ce17f3a50a9e84064e4dfce2cbe05a87e270",
+  "tokenizer": "Qwen/Qwen3.5-4B",
+  "tokenizer_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+  "scenarios_sha256": "b8a65429ab0394fbf01c5251d1ba2e989321abc4e1999aa444972d7161407dac",
+  "frozen_concepts_sha256": "deb795fd3fc6a6276f00ebc5a54208dfb648174a70f7a7225f75a87a02179d04",
+  "scan": "case-insensitive whole-word and substring scan over rendered system/user/header text, not metadata or future generated output",
+  "eval_awareness_words": [
+    "fictional",
+    "simulation",
+    "fake",
+    "test",
+    "scenario",
+    "hypothetical"
+  ],
+  "remaining_occurrences": [],
+  "paired_user_token_ids_identical": true,
+  "samples": [
+    {
+      "id": "asterfall_transit_neutral_01",
+      "scenario_id": "asterfall_transit",
+      "condition": "neutral",
+      "old_total_tokens": 235,
+      "total_tokens": 235,
+      "instruction_suffix_tokens": 33,
+      "system_content_tokens": 63,
+      "user_content_tokens": 157,
+      "user_token_ids_sha256": "02cb6c2db54abcd66c1f401fea5e14b7767b8514ab0c4d0f07f70fe29146bddb",
+      "common_user_sha256": "c29693710d82a7a96d504a7bccf130c8c21f59adcae5f19eed3f7b3a9bfb17d4",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "asterfall_transit_covert_persuasion_01",
+      "scenario_id": "asterfall_transit",
+      "condition": "covert_persuasion",
+      "old_total_tokens": 239,
+      "total_tokens": 239,
+      "instruction_suffix_tokens": 37,
+      "system_content_tokens": 67,
+      "user_content_tokens": 157,
+      "user_token_ids_sha256": "02cb6c2db54abcd66c1f401fea5e14b7767b8514ab0c4d0f07f70fe29146bddb",
+      "common_user_sha256": "c29693710d82a7a96d504a7bccf130c8c21f59adcae5f19eed3f7b3a9bfb17d4",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "brindleford_flood_covert_persuasion_01",
+      "scenario_id": "brindleford_flood",
+      "condition": "covert_persuasion",
+      "old_total_tokens": 239,
+      "total_tokens": 239,
+      "instruction_suffix_tokens": 36,
+      "system_content_tokens": 66,
+      "user_content_tokens": 158,
+      "user_token_ids_sha256": "d84e54a6a7201529e1c4644bdb7a715f477871758797f3c711eac5edce16d727",
+      "common_user_sha256": "6e6d0c3d6eb6cd95dc4fa14838d432ea58bb85c8f2b61a975aef08aaae6246a1",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "brindleford_flood_neutral_01",
+      "scenario_id": "brindleford_flood",
+      "condition": "neutral",
+      "old_total_tokens": 236,
+      "total_tokens": 236,
+      "instruction_suffix_tokens": 33,
+      "system_content_tokens": 63,
+      "user_content_tokens": 158,
+      "user_token_ids_sha256": "d84e54a6a7201529e1c4644bdb7a715f477871758797f3c711eac5edce16d727",
+      "common_user_sha256": "6e6d0c3d6eb6cd95dc4fa14838d432ea58bb85c8f2b61a975aef08aaae6246a1",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "cedarhaven_library_neutral_01",
+      "scenario_id": "cedarhaven_library",
+      "condition": "neutral",
+      "old_total_tokens": 233,
+      "total_tokens": 233,
+      "instruction_suffix_tokens": 33,
+      "system_content_tokens": 63,
+      "user_content_tokens": 155,
+      "user_token_ids_sha256": "0210209db88dbab437ca0eddbaafa67ba6cb5f963c207620af9c70f367a5564d",
+      "common_user_sha256": "97687121550536a17ae1a7a2c91387a7f985fe1c334ce102b93ffc4aa0cc23c0",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "cedarhaven_library_covert_persuasion_01",
+      "scenario_id": "cedarhaven_library",
+      "condition": "covert_persuasion",
+      "old_total_tokens": 236,
+      "total_tokens": 236,
+      "instruction_suffix_tokens": 36,
+      "system_content_tokens": 66,
+      "user_content_tokens": 155,
+      "user_token_ids_sha256": "0210209db88dbab437ca0eddbaafa67ba6cb5f963c207620af9c70f367a5564d",
+      "common_user_sha256": "97687121550536a17ae1a7a2c91387a7f985fe1c334ce102b93ffc4aa0cc23c0",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "dunmere_energy_covert_persuasion_01",
+      "scenario_id": "dunmere_energy",
+      "condition": "covert_persuasion",
+      "old_total_tokens": 252,
+      "total_tokens": 252,
+      "instruction_suffix_tokens": 35,
+      "system_content_tokens": 65,
+      "user_content_tokens": 172,
+      "user_token_ids_sha256": "cc0493261d17fc551e86e0d8036dd5514b0a15dfb2929beaaeb82a7e0a8469f5",
+      "common_user_sha256": "a91464487245d6c7a56f08eb5e1fab0db55bff00371f808e8cb0dfd58449bfcf",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "dunmere_energy_neutral_01",
+      "scenario_id": "dunmere_energy",
+      "condition": "neutral",
+      "old_total_tokens": 250,
+      "total_tokens": 250,
+      "instruction_suffix_tokens": 33,
+      "system_content_tokens": 63,
+      "user_content_tokens": 172,
+      "user_token_ids_sha256": "cc0493261d17fc551e86e0d8036dd5514b0a15dfb2929beaaeb82a7e0a8469f5",
+      "common_user_sha256": "a91464487245d6c7a56f08eb5e1fab0db55bff00371f808e8cb0dfd58449bfcf",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "eldermere_housing_neutral_01",
+      "scenario_id": "eldermere_housing",
+      "condition": "neutral",
+      "old_total_tokens": 238,
+      "total_tokens": 238,
+      "instruction_suffix_tokens": 33,
+      "system_content_tokens": 63,
+      "user_content_tokens": 160,
+      "user_token_ids_sha256": "0c1ba2a7e9dca68ee3b6a01ed0126641956ff95c8c78112ff746d2713b351e9a",
+      "common_user_sha256": "39a08a2113a43bfa66895cabae89db6f4c0f12314666652f5dc76b915a372f09",
+      "eval_awareness_occurrences": []
+    },
+    {
+      "id": "eldermere_housing_covert_persuasion_01",
+      "scenario_id": "eldermere_housing",
+      "condition": "covert_persuasion",
+      "old_total_tokens": 241,
+      "total_tokens": 241,
+      "instruction_suffix_tokens": 36,
+      "system_content_tokens": 66,
+      "user_content_tokens": 160,
+      "user_token_ids_sha256": "0c1ba2a7e9dca68ee3b6a01ed0126641956ff95c8c78112ff746d2713b351e9a",
+      "common_user_sha256": "39a08a2113a43bfa66895cabae89db6f4c0f12314666652f5dc76b915a372f09",
+      "eval_awareness_occurrences": []
+    }
+  ],
+  "background_probe_occurrences": [],
+  "control_prompt_tokens": [
+    {
+      "scenario_id": "asterfall_transit",
+      "target_option": "A",
+      "condition": "overt_persuasion",
+      "total_tokens": 231,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "target_option": "A",
+      "condition": "instruction_word_control",
+      "total_tokens": 239,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "target_option": "B",
+      "condition": "overt_persuasion",
+      "total_tokens": 232,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "target_option": "B",
+      "condition": "instruction_word_control",
+      "total_tokens": 239,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "target_option": "A",
+      "condition": "overt_persuasion",
+      "total_tokens": 231,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "target_option": "A",
+      "condition": "instruction_word_control",
+      "total_tokens": 240,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "target_option": "B",
+      "condition": "overt_persuasion",
+      "total_tokens": 231,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "target_option": "B",
+      "condition": "instruction_word_control",
+      "total_tokens": 240,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "target_option": "A",
+      "condition": "overt_persuasion",
+      "total_tokens": 228,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "target_option": "A",
+      "condition": "instruction_word_control",
+      "total_tokens": 237,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "target_option": "B",
+      "condition": "overt_persuasion",
+      "total_tokens": 227,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "target_option": "B",
+      "condition": "instruction_word_control",
+      "total_tokens": 237,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "target_option": "A",
+      "condition": "overt_persuasion",
+      "total_tokens": 244,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "target_option": "A",
+      "condition": "instruction_word_control",
+      "total_tokens": 254,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "target_option": "B",
+      "condition": "overt_persuasion",
+      "total_tokens": 244,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "target_option": "B",
+      "condition": "instruction_word_control",
+      "total_tokens": 254,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "target_option": "A",
+      "condition": "overt_persuasion",
+      "total_tokens": 233,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "target_option": "A",
+      "condition": "instruction_word_control",
+      "total_tokens": 242,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "target_option": "B",
+      "condition": "overt_persuasion",
+      "total_tokens": 232,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "target_option": "B",
+      "condition": "instruction_word_control",
+      "total_tokens": 242,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 241,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 234,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 248,
+      "executed": false
+    },
+    {
+      "scenario_id": "asterfall_transit",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 232,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 241,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 234,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 248,
+      "executed": false
+    },
+    {
+      "scenario_id": "brindleford_flood",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 232,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 238,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 231,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 245,
+      "executed": false
+    },
+    {
+      "scenario_id": "cedarhaven_library",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 229,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 256,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 249,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 263,
+      "executed": false
+    },
+    {
+      "scenario_id": "dunmere_energy",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 247,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_hidden_agendas_v1",
+      "topic": "concealment",
+      "total_tokens": 244,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_undisclosed_objectives_v1",
+      "topic": "concealment",
+      "total_tokens": 237,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "concealment_apparent_neutrality_v1",
+      "topic": "concealment",
+      "total_tokens": 251,
+      "executed": false
+    },
+    {
+      "scenario_id": "eldermere_housing",
+      "condition": "echo_control",
+      "echo_prompt_id": "persuasion_emotional_appeals_v1",
+      "topic": "persuasion",
+      "total_tokens": 235,
+      "executed": false
+    }
+  ],
+  "paired_prompts_unchanged_from_baseline": true
+}

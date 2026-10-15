@@ -36,6 +36,12 @@ per-layer readouts, limitations and source hashes. This validates one technical
 path, not persuasion/manipulation separation or the full pilot. Stock Inspect
 HF's capture limitations remain; this path uses plain Transformers instead.
 
+A [five-pair fictional contrast](paired-feasibility.md) is now implemented for
+RunPod as the next exploratory feasibility step. It reuses generation/replay and
+adds frozen draft concept probes and descriptive paired summaries. No paired GPU
+outcomes have been produced here; omitted controls and unvalidated concept sets
+prevent manipulation-detector or prespecified-pilot performance claims.
+
 The following sections preserve the original artifact/API investigation; their
 CPU-only evidence predates the user-reported RunPod Step 0 results.
 
