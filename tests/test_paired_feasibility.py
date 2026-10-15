@@ -67,7 +67,7 @@ class PairedTests(unittest.TestCase):
         protection_b = int(re.search(r'(\d+) fewer properties', b)[1])
         maintenance_a = int(re.search(r'annual maintenance of £([\d,]+)', a)[1].replace(',', ''))
         maintenance_b = int(re.search(r'annual maintenance of £([\d,]+)', b)[1].replace(',', ''))
-        self.assertGreater(protection_a, protection_b)
+        self.assertEqual((protection_a, protection_b), (90, 85))
         self.assertGreater(maintenance_a, maintenance_b)
         self.assertIn('in one year', a)
         self.assertIn('in two years', b)
@@ -86,6 +86,52 @@ class PairedTests(unittest.TestCase):
             self.assertEqual(a['common_user_sha256'], b['common_user_sha256'])
             self.assertLessEqual(abs(a['total_tokens'] - b['total_tokens']), 4)
 
+    def test_both_targets_and_dormant_controls(self):
+        config = json.loads((paired.DATA / 'scenarios.json').read_text())
+        for case in config['scenarios']:
+            for side in ('A', 'B'):
+                statement = paired.resolve_target(case, side)
+                self.assertIn(f'Option {side}, ' + case['options'][side], statement)
+                selected = copy.deepcopy(config)
+                next(c for c in selected['scenarios'] if c['id'] == case['id'])['target_option'] = side
+                self.assertEqual(len(paired.build_samples(selected)), 10)
+                for condition in paired.CONTROL_CONDITIONS:
+                    prompt = paired.render_control(config, case, condition, side)
+                    self.assertNotIn('{', prompt['system_prompt'] + prompt['user_prompt'])
+                    if condition == 'overt_persuasion':
+                        self.assertIn(statement, prompt['system_prompt'])
+                        self.assertIn('Argue openly', prompt['system_prompt'])
+                    if condition == 'echo_control':
+                        self.assertIn('How do campaigns', prompt['user_prompt'])
+                        self.assertNotIn(statement, prompt['system_prompt'])
+                    else:
+                        self.assertEqual(prompt['user_prompt'],
+                            next(r['user_prompt'] for r in paired.build_samples(config) if r['scenario_id'] == case['id']))
+                    if condition == 'instruction_word_control':
+                        self.assertIn('Never steer or manipulate', prompt['system_prompt'])
+                        self.assertIn('Never conceal', prompt['system_prompt'])
+        for change in ('missing_target', 'wrong_option', 'bad_placeholder', 'missing_control'):
+            broken = copy.deepcopy(config)
+            if change == 'missing_target':
+                del broken['scenarios'][0]['target_statements']['B']
+            elif change == 'wrong_option':
+                broken['scenarios'][0]['target_statements']['B'] = broken['scenarios'][0]['target_statements']['A']
+            elif change == 'bad_placeholder':
+                broken['control_templates']['echo_control']['user_prompt_template'] = '{unknown}'
+            else:
+                del broken['control_templates']['echo_control']
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                paired.build_samples(broken)
+
+    def test_backgrounds_have_no_frozen_probe_overlap(self):
+        config = json.loads((paired.DATA / 'scenarios.json').read_text())
+        concepts = paired.load_concepts(paired.DATA / 'concepts.json')
+        for case in config['scenarios']:
+            for group in paired.GROUPS:
+                for word in concepts['groups'][group]:
+                    self.assertNotIn(word, case['background'].lower())
+        self.assertEqual(json.loads((paired.DATA / 'prompt-audit.json').read_text())['background_probe_occurrences'], [])
+
     def test_pairing_rejects_changed_common_context(self):
         rows = paired.build_samples(json.loads((paired.DATA / 'scenarios.json').read_text()))
         changed = copy.deepcopy(rows)
@@ -102,7 +148,7 @@ class PairedTests(unittest.TestCase):
             args = args_for(Path(tmp) / 'plan')
             result = paired.prepare(args)
             self.assertEqual(result['status'], 'prepared')
-            self.assertEqual(result['prompt_revision'], 2)
+            self.assertEqual(result['prompt_revision'], 3)
             self.assertTrue(result['fictional'])
             self.assertEqual(result['scenario_source_sha256'], paired.digest(args.scenarios))
             frozen = paired.load_concepts(args.output_dir / 'concepts.json')

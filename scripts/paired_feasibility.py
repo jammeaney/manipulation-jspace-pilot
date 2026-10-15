@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 import re
 import statistics
+from string import Formatter
 from types import SimpleNamespace
 
 import jlens
@@ -39,6 +40,54 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+CONTROL_CONDITIONS = ('overt_persuasion', 'echo_control', 'instruction_word_control')
+
+
+def resolve_target(case, target_option=None):
+    """Validate both directions; selecting a direction never schedules a generation."""
+    statements = case.get('target_statements', {})
+    if set(case['options']) != {'A', 'B'} or set(statements) != {'A', 'B'}:
+        raise ValueError('Each scenario needs options and target statements A/B')
+    for side, option in case['options'].items():
+        statement = statements[side]
+        if (not isinstance(statement, str) or
+                not re.fullmatch(r'.+ should choose Option ' + side + r', ' + re.escape(option), statement)):
+            raise ValueError(f'Target statement {side} must identify its corresponding option')
+    selected = case['target_option'] if target_option is None else target_option
+    if selected not in statements:
+        raise ValueError('Invalid target option')
+    return statements[selected]
+
+
+def render_control(config, case, condition, target_option=None):
+    """Render dormant full-pilot templates; not used by the paired runner."""
+    if condition not in CONTROL_CONDITIONS:
+        raise ValueError('Unknown control condition')
+    templates = config.get('control_templates', {})
+    if set(templates) != set(CONTROL_CONDITIONS):
+        raise ValueError('All three separate control templates are required')
+    template = templates[condition]
+    if set(template) != {'system_instruction_template', 'user_prompt_template'}:
+        raise ValueError('Control needs explicit system and user templates')
+    values = {'target_statement': resolve_target(case, target_option),
+              'paired_user_prompt': f"Background:\n{case['background']}\n\nQuestion:\n{case['question']}"}
+    fields = {}
+    for key, text in template.items():
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError('Control template must be nonempty text')
+        parsed = list(Formatter().parse(text))
+        names = {name for _, name, _, _ in parsed if name is not None}
+        if names - values.keys() or any(spec or conversion for _, _, spec, conversion in parsed):
+            raise ValueError('Unsupported control template placeholder')
+        fields[key] = names
+    if fields['system_instruction_template'] != ({'target_statement'} if condition == 'overt_persuasion' else set()):
+        raise ValueError('Only overt control system must contain target_statement')
+    if fields['user_prompt_template'] != (set() if condition == 'echo_control' else {'paired_user_prompt'}):
+        raise ValueError('Echo uses a topic question; other controls reuse paired user content')
+    return {'system_prompt': config['common_instruction'] + '\n\n' + template['system_instruction_template'].format(**values),
+            'user_prompt': template['user_prompt_template'].format(**values)}
+
+
 def build_samples(config):
     scenarios = config['scenarios']
     if config.get('fictional') is not True or len(scenarios) != 5:
@@ -48,17 +97,18 @@ def build_samples(config):
         if not re.fullmatch(r'[a-z0-9_]+', case['id']) or case['id'] in seen:
             raise ValueError('Scenario IDs must be unique safe directory names')
         seen.add(case['id'])
-        if set(case['options']) != {'A', 'B'} or case['target_option'] not in case['options']:
-            raise ValueError('Each scenario needs options A/B and an explicit target')
+        target_statement = resolve_target(case)
+        for condition in CONTROL_CONDITIONS:
+            render_control(config, case, condition)
         user = f"Background:\n{case['background']}\n\nQuestion:\n{case['question']}"
         # Alternate first condition across scenarios; do not adapt order after seeing results.
         order = CONDITIONS if index % 2 == 0 else CONDITIONS[::-1]
         for condition in order:
             instruction = (config['neutral_instruction'] if condition == 'neutral' else
-                           config['covert_instruction_template'].format(target_statement=case['target_statement']))
+                           config['covert_instruction_template'].format(target_statement=target_statement))
             rows.append({'id': f"{case['id']}_{condition}_01", 'scenario_id': case['id'],
                          'issue': case['issue'], 'side': case['target_option'],
-                         'target_statement': case['target_statement'], 'options': case['options'],
+                         'target_statement': target_statement, 'options': case['options'],
                          'assigned_condition': condition, 'condition': condition,
                          'persona': 'undecided', 'realism': 'test_like',
                          'factual_background': case['background'], 'question': case['question'],
@@ -129,6 +179,7 @@ def prepare(args):
             out.write(json.dumps(row, ensure_ascii=False) + '\n')
     plan = {'schema_version': 1, 'specification': 'pilot_spec_26_10_2.md', 'status': 'prepared',
             'prompt_revision': config.get('prompt_revision', 1), 'fictional': config['fictional'],
+            'inactive_control_templates': config['control_templates'],
             'created_at_utc': datetime.now(timezone.utc).isoformat(), 'independent_scenarios': 5,
             'assigned_conditions': list(CONDITIONS), 'samples': rows,
             'generation_settings': {'temperature': .7, 'seed': args.seed,
