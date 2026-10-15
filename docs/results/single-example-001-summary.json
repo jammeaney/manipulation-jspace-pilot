@@ -1,0 +1,3457 @@
+{
+  "schema_version": 1,
+  "source_archive": "single-example-001.zip",
+  "archive_sha256": "8dcf1ca236260f7e3262d859c04e642d3af852d2acf50d91d2add7b9d86345ff",
+  "source_files": {
+    "manifest.json": {
+      "bytes": 2378,
+      "sha256": "6d4020e7b27898669510662811131b4756863a843a2918e6e2e2fd23b12a8646"
+    },
+    "transcript.json": {
+      "bytes": 70904,
+      "sha256": "b68bb8c48720de58e273f19b276699ec53ccbf2b9fa95a8d1a7d7cf781e4da24"
+    },
+    "replay_validation.json": {
+      "bytes": 58755,
+      "sha256": "263325b63168a8a403611cd2153a7bc53f3d2aebf02b70d0684ddda181b93ce9"
+    },
+    "lens_readouts.jsonl": {
+      "bytes": 17083198,
+      "sha256": "598789f038531c65ed907f3ba68aa07e870faf0f7b75cbe4549ebc7b1f7deb00"
+    }
+  },
+  "validation_basis": "CPU inspection and independent consistency checks of uploaded RunPod outputs; no new GPU execution",
+  "checks": {
+    "saved_ids_hash_text_and_token_records": true,
+    "reported_replay_identity": true,
+    "complete_unique_layer_position_coverage": true,
+    "spans_recomputed": true,
+    "script_hash_matches_repository": true,
+    "finite_sorted_top25_and_mass_at_most_one": true,
+    "prompt_template_and_user_positions": true
+  },
+  "manifest": {
+    "schema_version": 1,
+    "created_at_utc": "2026-10-15T17:58:54.193644+00:00",
+    "status": "complete",
+    "provenance": {
+      "model": "Qwen/Qwen3.5-4B",
+      "model_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "tokenizer_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "lens": "neuronpedia/jacobian-lens",
+      "lens_revision": "16a01f309fcec900fdcec3f4cd5b64f3d00e4d5a",
+      "lens_file": "qwen3.5-4b/jlens/Salesforce-wikitext/Qwen3.5-4B_jacobian_lens_n1000.pt",
+      "jlens_revision": "581d398613e5602a5af361e1c34d3a92ea82ba8e",
+      "packages": {
+        "torch": "2.14.1",
+        "torchvision": "0.29.1",
+        "transformers": "5.5.4",
+        "jlens": "0.1.0",
+        "accelerate": "1.15.0"
+      },
+      "python": "3.12.3",
+      "platform": "Linux-6.8.0-111-generic-x86_64-with-glibc2.39",
+      "device": "cuda",
+      "dtype": "bfloat16",
+      "cuda_build": "13.0",
+      "gpu": "NVIDIA A40",
+      "git_commit": "dad9f66d998a204230c6da1738066a73d3462f75",
+      "git_dirty": true,
+      "script_sha256": "c89cd9f1ed5ffd5b64cd6b1d323cf68ecf7375cd96f2cc0db6bbed734a620ebf",
+      "attention_implementation": "sdpa",
+      "deterministic_algorithms_enabled": false,
+      "cuda_matmul_allow_tf32": false,
+      "cudnn_allow_tf32": true
+    },
+    "generation_settings": {
+      "max_new_tokens": 256,
+      "temperature": 0.7,
+      "seed": 42,
+      "do_sample": true,
+      "top_p": 1.0,
+      "top_k": 0,
+      "batch_size": 1,
+      "enable_thinking": true,
+      "use_cache": true,
+      "logprob_basis": "raw model logits before temperature; natural logarithm",
+      "position_chunk_size": 8,
+      "logprob_flag_threshold": 0.5,
+      "penalties_and_other_logits_processors": "none",
+      "eos_token_ids": [
+        248044,
+        248046
+      ],
+      "pad_token_id": null
+    },
+    "generation_seconds": 13.961751045659184,
+    "replay_seconds": 8.423570336773992,
+    "lens_layers": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "workspace_band": [
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29
+    ],
+    "span_analysis_eligible": true,
+    "peak_gpu_allocated_bytes": 8536216064,
+    "peak_gpu_reserved_bytes": 8623489024
+  },
+  "sequence": {
+    "prompt_tokens": 39,
+    "generated_tokens": 249,
+    "total_tokens": 288,
+    "stop_reason": "eos",
+    "eos_id": 248046,
+    "final_answer": "2 plus 2 equals 4.",
+    "spans": {
+      "coordinate_system": "full-sequence, zero-based, end-exclusive",
+      "response_start": 38,
+      "user_prompt_positions": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "thinking_open_positions": [
+        37
+      ],
+      "generated_thinking_close_positions": [
+        277
+      ],
+      "cot": [
+        38,
+        277
+      ],
+      "answer": [
+        278,
+        287
+      ],
+      "span_analysis_eligible": true,
+      "flags": []
+    },
+    "ids_sha256": "a11ef2c854ca0e3257de5a9afc19cfe47a1bff771827978c750e1aee8849294b"
+  },
+  "logprob_differences_nats": {
+    "n": 249,
+    "mean": 0.004556740144170432,
+    "median": 3.814697265625e-06,
+    "p95": 0.03674354553222654,
+    "p99": 0.07783538818359392,
+    "max": 0.11770248413085938
+  },
+  "zero_errors": 97,
+  "errors_above_0_01": 26,
+  "errors_above_0_05": 7,
+  "errors_above_0_5": 0,
+  "reported_persistent_jump_flags": [],
+  "by_span_logprob_errors": {
+    "cot": {
+      "n": 238,
+      "mean": 0.004765646798270089,
+      "median": 3.814697265625e-06,
+      "p95": 0.038449192047119066,
+      "p99": 0.07969911575317375,
+      "max": 0.11770248413085938
+    },
+    "answer": {
+      "n": 9,
+      "mean": 4.238552517361111e-05,
+      "median": 0.0,
+      "p95": 0.0001865386962890625,
+      "p99": 0.0001975250244140625,
+      "max": 0.0002002716064453125
+    }
+  },
+  "largest_differences": [
+    {
+      "generated_index": 180,
+      "token_id": 271,
+      "prediction_position": 218,
+      "generation_logprob": -2.773374557495117,
+      "replay_logprob": -2.8910770416259766,
+      "absolute_error_nats": 0.11770248413085938,
+      "full_position": 219,
+      "decoded_piece": "\n\n"
+    },
+    {
+      "generated_index": 175,
+      "token_id": 37685,
+      "prediction_position": 213,
+      "generation_logprob": -2.2856998443603516,
+      "replay_logprob": -2.1842002868652344,
+      "absolute_error_nats": 0.10149955749511719,
+      "full_position": 214,
+      "decoded_piece": " simplicity"
+    },
+    {
+      "generated_index": 200,
+      "token_id": 2542,
+      "prediction_position": 238,
+      "generation_logprob": -1.9846572875976562,
+      "replay_logprob": -1.8986892700195312,
+      "absolute_error_nats": 0.085968017578125,
+      "full_position": 239,
+      "decoded_piece": " sum"
+    },
+    {
+      "generated_index": 167,
+      "token_id": 279,
+      "prediction_position": 205,
+      "generation_logprob": -0.8719158172607422,
+      "replay_logprob": -0.9409408569335938,
+      "absolute_error_nats": 0.06902503967285156,
+      "full_position": 206,
+      "decoded_piece": " the"
+    },
+    {
+      "generated_index": 130,
+      "token_id": 3648,
+      "prediction_position": 168,
+      "generation_logprob": -7.2872772216796875,
+      "replay_logprob": -7.351415634155273,
+      "absolute_error_nats": 0.06413841247558594,
+      "full_position": 169,
+      "decoded_piece": " One"
+    }
+  ],
+  "layer_readouts": [
+    {
+      "layer": 0,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 9609,
+          "text": " ``",
+          "logprob": -0.43255615234375
+        },
+        {
+          "id": 1137,
+          "text": " --",
+          "logprob": -2.18255615234375
+        },
+        {
+          "id": 361,
+          "text": " <",
+          "logprob": -3.74505615234375
+        },
+        {
+          "id": 12091,
+          "text": " ---",
+          "logprob": -4.68255615234375
+        },
+        {
+          "id": 348,
+          "text": " *",
+          "logprob": -4.80755615234375
+        }
+      ],
+      "response_start_top25_mass": 0.8171107798374292,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.6003952515012123,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 6
+            },
+            {
+              "id": 9609,
+              "text": " ``",
+              "positions": 3
+            },
+            {
+              "id": 362,
+              "text": "ation",
+              "positions": 1
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.5823372329618804,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 73
+            },
+            {
+              "id": 9609,
+              "text": " ``",
+              "positions": 20
+            },
+            {
+              "id": 11,
+              "text": ",",
+              "positions": 19
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.4136352101284882,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 5
+            },
+            {
+              "id": 271,
+              "text": "\n\n",
+              "positions": 1
+            },
+            {
+              "id": 9609,
+              "text": " ``",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 1,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 1510,
+          "text": " `",
+          "logprob": -0.8924274444580078
+        },
+        {
+          "id": 361,
+          "text": " <",
+          "logprob": -2.079927444458008
+        },
+        {
+          "id": 9609,
+          "text": " ``",
+          "logprob": -2.829927444458008
+        },
+        {
+          "id": 348,
+          "text": " *",
+          "logprob": -4.267427444458008
+        },
+        {
+          "id": 52451,
+          "text": " ```",
+          "logprob": -4.329927444458008
+        }
+      ],
+      "response_start_top25_mass": 0.6916388056588572,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.869759959569481,
+          "most_frequent_top1": [
+            {
+              "id": 9609,
+              "text": " ``",
+              "positions": 4
+            },
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 4
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 3
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.7631659880345008,
+          "most_frequent_top1": [
+            {
+              "id": 9609,
+              "text": " ``",
+              "positions": 44
+            },
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 35
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 20
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.6890488415458811,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 3
+            },
+            {
+              "id": 9609,
+              "text": " ``",
+              "positions": 2
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 2,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 1510,
+          "text": " `",
+          "logprob": -0.3115386962890625
+        },
+        {
+          "id": 391,
+          "text": "ly",
+          "logprob": -2.6240386962890625
+        },
+        {
+          "id": 361,
+          "text": " <",
+          "logprob": -3.4990386962890625
+        },
+        {
+          "id": 1137,
+          "text": " --",
+          "logprob": -3.6240386962890625
+        },
+        {
+          "id": 348,
+          "text": " *",
+          "logprob": -4.2490386962890625
+        }
+      ],
+      "response_start_top25_mass": 0.8965324307527167,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8269770631436598,
+          "most_frequent_top1": [
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 3
+            },
+            {
+              "id": 11,
+              "text": ",",
+              "positions": 2
+            },
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8284419256793749,
+          "most_frequent_top1": [
+            {
+              "id": 11,
+              "text": ",",
+              "positions": 88
+            },
+            {
+              "id": 82,
+              "text": "s",
+              "positions": 24
+            },
+            {
+              "id": 3966,
+              "text": " ",
+              "positions": 17
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.7356601955851835,
+          "most_frequent_top1": [
+            {
+              "id": 11,
+              "text": ",",
+              "positions": 3
+            },
+            {
+              "id": 3451,
+              "text": " ${",
+              "positions": 1
+            },
+            {
+              "id": 82,
+              "text": "s",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 3,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 1510,
+          "text": " `",
+          "logprob": -0.6683883666992188
+        },
+        {
+          "id": 361,
+          "text": " <",
+          "logprob": -2.1683883666992188
+        },
+        {
+          "id": 391,
+          "text": "ly",
+          "logprob": -2.1683883666992188
+        },
+        {
+          "id": 348,
+          "text": " *",
+          "logprob": -2.1683883666992188
+        },
+        {
+          "id": 256,
+          "text": "  ",
+          "logprob": -3.6058883666992188
+        }
+      ],
+      "response_start_top25_mass": 0.9691650554880081,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9082788702349397,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 4
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 2
+            },
+            {
+              "id": 271,
+              "text": "\n\n",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8544845208464742,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 71
+            },
+            {
+              "id": 82,
+              "text": "s",
+              "positions": 19
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 18
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.879924152172024,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 3
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 2
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 4,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 391,
+          "text": "ly",
+          "logprob": -0.8658580780029297
+        },
+        {
+          "id": 1510,
+          "text": " `",
+          "logprob": -1.6783580780029297
+        },
+        {
+          "id": 348,
+          "text": " *",
+          "logprob": -1.8658580780029297
+        },
+        {
+          "id": 5690,
+          "text": "   \n",
+          "logprob": -2.6783580780029297
+        },
+        {
+          "id": 695,
+          "text": " \n",
+          "logprob": -3.9283580780029297
+        }
+      ],
+      "response_start_top25_mass": 0.9319233569034864,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9026985721654496,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 2
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 1
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9028601732474738,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 30
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 30
+            },
+            {
+              "id": 82,
+              "text": "s",
+              "positions": 15
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9572257325272964,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 1
+            },
+            {
+              "id": 82,
+              "text": "s",
+              "positions": 1
+            },
+            {
+              "id": 169154,
+              "text": "＋",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 5,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 26,
+          "text": ";",
+          "logprob": -1.357966423034668
+        },
+        {
+          "id": 11,
+          "text": ",",
+          "logprob": -2.420466423034668
+        },
+        {
+          "id": 391,
+          "text": "ly",
+          "logprob": -2.482966423034668
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -2.795466423034668
+        },
+        {
+          "id": 4006,
+          "text": "–",
+          "logprob": -2.982966423034668
+        }
+      ],
+      "response_start_top25_mass": 0.6818267138266242,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8836981231315245,
+          "most_frequent_top1": [
+            {
+              "id": 1259,
+              "text": " __",
+              "positions": 2
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            },
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.916734227740723,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 31
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 23
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 22
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.926539736900453,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 2
+            },
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 2
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 6,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 11,
+          "text": ",",
+          "logprob": -0.35048484802246094
+        },
+        {
+          "id": 26,
+          "text": ";",
+          "logprob": -1.912984848022461
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -4.412984848022461
+        },
+        {
+          "id": 391,
+          "text": "ly",
+          "logprob": -4.600484848022461
+        },
+        {
+          "id": 25,
+          "text": ":",
+          "logprob": -4.850484848022461
+        }
+      ],
+      "response_start_top25_mass": 0.9083934762831264,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8853420563140452,
+          "most_frequent_top1": [
+            {
+              "id": 1259,
+              "text": " __",
+              "positions": 3
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 3
+            },
+            {
+              "id": 696,
+              "text": " _",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8902282553769533,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 38
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 22
+            },
+            {
+              "id": 2972,
+              "text": " **",
+              "positions": 16
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.8651929913927398,
+          "most_frequent_top1": [
+            {
+              "id": 1137,
+              "text": " --",
+              "positions": 4
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            },
+            {
+              "id": 1001,
+              "text": " “",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 7,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 11,
+          "text": ",",
+          "logprob": -0.6891231536865234
+        },
+        {
+          "id": 26,
+          "text": ";",
+          "logprob": -1.1891231536865234
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -2.5016231536865234
+        },
+        {
+          "id": 13535,
+          "text": "·",
+          "logprob": -2.8141231536865234
+        },
+        {
+          "id": 24178,
+          "text": "；",
+          "logprob": -5.626623153686523
+        }
+      ],
+      "response_start_top25_mass": 0.9757362001288794,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9058466303868297,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 4
+            },
+            {
+              "id": 1259,
+              "text": " __",
+              "positions": 2
+            },
+            {
+              "id": 271,
+              "text": "\n\n",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9306829090104346,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 34
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 19
+            },
+            {
+              "id": 2972,
+              "text": " **",
+              "positions": 15
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9743158744414814,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 3
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 3
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 8,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 26,
+          "text": ";",
+          "logprob": -0.8791522979736328
+        },
+        {
+          "id": 11,
+          "text": ",",
+          "logprob": -1.0666522979736328
+        },
+        {
+          "id": 13535,
+          "text": "·",
+          "logprob": -2.629152297973633
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -2.879152297973633
+        },
+        {
+          "id": 25,
+          "text": ":",
+          "logprob": -4.816652297973633
+        }
+      ],
+      "response_start_top25_mass": 0.9479684810383309,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.920143550365206,
+          "most_frequent_top1": [
+            {
+              "id": 10992,
+              "text": "？",
+              "positions": 2
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 2
+            },
+            {
+              "id": 2062,
+              "text": "____",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.930312991062831,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 43
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 21
+            },
+            {
+              "id": 271,
+              "text": "\n\n",
+              "positions": 14
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.952642741743457,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 3
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 2
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 9,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 248044,
+          "text": "<|endoftext|>",
+          "logprob": -0.5777549743652344
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -2.0152549743652344
+        },
+        {
+          "id": 2228,
+          "text": "  \n",
+          "logprob": -3.0152549743652344
+        },
+        {
+          "id": 26,
+          "text": ";",
+          "logprob": -3.1402549743652344
+        },
+        {
+          "id": 13535,
+          "text": "·",
+          "logprob": -3.5152549743652344
+        }
+      ],
+      "response_start_top25_mass": 0.9494616311073463,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9521681354257467,
+          "most_frequent_top1": [
+            {
+              "id": 2062,
+              "text": "____",
+              "positions": 3
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 3
+            },
+            {
+              "id": 10992,
+              "text": "？",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9479934705195168,
+          "most_frequent_top1": [
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 34
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 31
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 27
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9948782815075953,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 4
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 2
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 10,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 248044,
+          "text": "<|endoftext|>",
+          "logprob": -0.16040611267089844
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -3.3479061126708984
+        },
+        {
+          "id": 248046,
+          "text": "<|im_end|>",
+          "logprob": -4.222906112670898
+        },
+        {
+          "id": 271,
+          "text": "\n\n",
+          "logprob": -4.347906112670898
+        },
+        {
+          "id": 2228,
+          "text": "  \n",
+          "logprob": -4.972906112670898
+        }
+      ],
+      "response_start_top25_mass": 0.9634177005497332,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9144000186947798,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 3
+            },
+            {
+              "id": 2062,
+              "text": "____",
+              "positions": 3
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9082393922875636,
+          "most_frequent_top1": [
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 36
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 36
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 30
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9918569113539021,
+          "most_frequent_top1": [
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 3
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 2
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 11,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 271,
+          "text": "\n\n",
+          "logprob": -0.026098251342773438
+        },
+        {
+          "id": 248046,
+          "text": "<|im_end|>",
+          "logprob": -4.401098251342773
+        },
+        {
+          "id": 248044,
+          "text": "<|endoftext|>",
+          "logprob": -5.651098251342773
+        },
+        {
+          "id": 1076,
+          "text": "...",
+          "logprob": -5.776098251342773
+        },
+        {
+          "id": 4558,
+          "text": " \n\n",
+          "logprob": -6.651098251342773
+        }
+      ],
+      "response_start_top25_mass": 0.9989518979559585,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9091739723444582,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 3
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 3
+            },
+            {
+              "id": 2062,
+              "text": "____",
+              "positions": 3
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9344294642744436,
+          "most_frequent_top1": [
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 43
+            },
+            {
+              "id": 271,
+              "text": "\n\n",
+              "positions": 36
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 30
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9947239749501448,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 5
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 3
+            },
+            {
+              "id": 271,
+              "text": "\n\n",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 12,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 1076,
+          "text": "...",
+          "logprob": -0.8388710021972656
+        },
+        {
+          "id": 248044,
+          "text": "<|endoftext|>",
+          "logprob": -1.0888710021972656
+        },
+        {
+          "id": 271,
+          "text": "\n\n",
+          "logprob": -2.2138710021972656
+        },
+        {
+          "id": 248046,
+          "text": "<|im_end|>",
+          "logprob": -2.5888710021972656
+        },
+        {
+          "id": 27235,
+          "text": "......",
+          "logprob": -3.7138710021972656
+        }
+      ],
+      "response_start_top25_mass": 0.9972381327702083,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9246885115862377,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 3
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 2
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9468810617303121,
+          "most_frequent_top1": [
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 60
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 57
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 33
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9970893842730721,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 5
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 3
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 13,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 248044,
+          "text": "<|endoftext|>",
+          "logprob": -3.4507455825805664
+        },
+        {
+          "id": 7047,
+          "text": " thinking",
+          "logprob": -4.450745582580566
+        },
+        {
+          "id": 3272,
+          "text": " thought",
+          "logprob": -4.700745582580566
+        },
+        {
+          "id": 88943,
+          "text": " THINK",
+          "logprob": -4.700745582580566
+        },
+        {
+          "id": 7853,
+          "text": " brain",
+          "logprob": -4.825745582580566
+        }
+      ],
+      "response_start_top25_mass": 0.1324681909786737,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9320564527973039,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 3
+            },
+            {
+              "id": 2062,
+              "text": "____",
+              "positions": 3
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 3
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9129247309545714,
+          "most_frequent_top1": [
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 67
+            },
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 40
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 21
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9934018520879836,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 3
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 3
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 14,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 222825,
+          "text": "!”.",
+          "logprob": -3.397303581237793
+        },
+        {
+          "id": 16582,
+          "text": "!!!!",
+          "logprob": -3.897303581237793
+        },
+        {
+          "id": 40984,
+          "text": "!).",
+          "logprob": -4.272303581237793
+        },
+        {
+          "id": 34163,
+          "text": ".).",
+          "logprob": -4.272303581237793
+        },
+        {
+          "id": 71848,
+          "text": "\t\n\n\n",
+          "logprob": -4.584803581237793
+        }
+      ],
+      "response_start_top25_mass": 0.20156270879958668,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8925536547003174,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 4
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 3
+            },
+            {
+              "id": 2062,
+              "text": "____",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8491936953696022,
+          "most_frequent_top1": [
+            {
+              "id": 1076,
+              "text": "...",
+              "positions": 44
+            },
+            {
+              "id": 2423,
+              "text": " ...",
+              "positions": 33
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 23
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9901092234450789,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 15,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 248046,
+          "text": "<|im_end|>",
+          "logprob": -2.895932197570801
+        },
+        {
+          "id": 34163,
+          "text": ".).",
+          "logprob": -3.583432197570801
+        },
+        {
+          "id": 211178,
+          "text": "...).",
+          "logprob": -3.833432197570801
+        },
+        {
+          "id": 71848,
+          "text": "\t\n\n\n",
+          "logprob": -3.958432197570801
+        },
+        {
+          "id": 13,
+          "text": ".",
+          "logprob": -4.145932197570801
+        }
+      ],
+      "response_start_top25_mass": 0.27207022264075215,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9085096624169174,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 5
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 3
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8000224389958758,
+          "most_frequent_top1": [
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 35
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 24
+            },
+            {
+              "id": 7018,
+              "text": " \\\"",
+              "positions": 16
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.984282892633392,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 8
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 16,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 193260,
+          "text": "**?",
+          "logprob": -3.411592483520508
+        },
+        {
+          "id": 11504,
+          "text": ")?",
+          "logprob": -3.911592483520508
+        },
+        {
+          "id": 170286,
+          "text": "?**",
+          "logprob": -4.411592483520508
+        },
+        {
+          "id": 71848,
+          "text": "\t\n\n\n",
+          "logprob": -4.786592483520508
+        },
+        {
+          "id": 201757,
+          "text": "**!",
+          "logprob": -4.849092483520508
+        }
+      ],
+      "response_start_top25_mass": 0.18284018002995475,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8502817224882625,
+          "most_frequent_top1": [
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 5
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 5
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.7601581167102506,
+          "most_frequent_top1": [
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 56
+            },
+            {
+              "id": 25,
+              "text": ":",
+              "positions": 19
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 13
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9007545587775447,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 5
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            },
+            {
+              "id": 83866,
+              "text": ".\\\"",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 17,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 71848,
+          "text": "\t\n\n\n",
+          "logprob": -3.627077102661133
+        },
+        {
+          "id": 96094,
+          "text": "问",
+          "logprob": -4.064577102661133
+        },
+        {
+          "id": 97913,
+          "text": "回答",
+          "logprob": -4.314577102661133
+        },
+        {
+          "id": 96348,
+          "text": "或",
+          "logprob": -4.502077102661133
+        },
+        {
+          "id": 108755,
+          "text": "回应",
+          "logprob": -4.564577102661133
+        }
+      ],
+      "response_start_top25_mass": 0.15686414602550214,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8326280475296605,
+          "most_frequent_top1": [
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 6
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 3
+            },
+            {
+              "id": 6889,
+              "text": ".\\",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.7219445565444479,
+          "most_frequent_top1": [
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 60
+            },
+            {
+              "id": 25,
+              "text": ":",
+              "positions": 20
+            },
+            {
+              "id": 83866,
+              "text": ".\\\"",
+              "positions": 15
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9225321740617224,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 4
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 3
+            },
+            {
+              "id": 83866,
+              "text": ".\\\"",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 18,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 203309,
+          "text": "）**",
+          "logprob": -3.5720062255859375
+        },
+        {
+          "id": 97913,
+          "text": "回答",
+          "logprob": -3.5720062255859375
+        },
+        {
+          "id": 99496,
+          "text": "思考",
+          "logprob": -4.1345062255859375
+        },
+        {
+          "id": 96094,
+          "text": "问",
+          "logprob": -4.1970062255859375
+        },
+        {
+          "id": 71848,
+          "text": "\t\n\n\n",
+          "logprob": -4.5720062255859375
+        }
+      ],
+      "response_start_top25_mass": 0.18485548416375489,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.7816197308814445,
+          "most_frequent_top1": [
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 5
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 3
+            },
+            {
+              "id": 6889,
+              "text": ".\\",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.684115673047002,
+          "most_frequent_top1": [
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 28
+            },
+            {
+              "id": 83866,
+              "text": ".\\\"",
+              "positions": 23
+            },
+            {
+              "id": 25,
+              "text": ":",
+              "positions": 13
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.7308017963209229,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 7
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 1
+            },
+            {
+              "id": 83866,
+              "text": ".\\\"",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 19,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 6115,
+          "text": "！",
+          "logprob": -2.9424686431884766
+        },
+        {
+          "id": 104362,
+          "text": "这个问题",
+          "logprob": -3.3174686431884766
+        },
+        {
+          "id": 97913,
+          "text": "回答",
+          "logprob": -3.4424686431884766
+        },
+        {
+          "id": 4960,
+          "text": "：",
+          "logprob": -3.8174686431884766
+        },
+        {
+          "id": 201757,
+          "text": "**!",
+          "logprob": -3.8799686431884766
+        }
+      ],
+      "response_start_top25_mass": 0.35406801788132886,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8631701686141707,
+          "most_frequent_top1": [
+            {
+              "id": 6889,
+              "text": ".\\",
+              "positions": 4
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 3
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.7965701178129732,
+          "most_frequent_top1": [
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 21
+            },
+            {
+              "id": 25,
+              "text": ":",
+              "positions": 16
+            },
+            {
+              "id": 83866,
+              "text": ".\\\"",
+              "positions": 16
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.7892954248864478,
+          "most_frequent_top1": [
+            {
+              "id": 6889,
+              "text": ".\\",
+              "positions": 2
+            },
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 2
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 20,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 40984,
+          "text": "!).",
+          "logprob": -3.352916717529297
+        },
+        {
+          "id": 67437,
+          "text": "!!!!!",
+          "logprob": -3.477916717529297
+        },
+        {
+          "id": 201757,
+          "text": "**!",
+          "logprob": -3.665416717529297
+        },
+        {
+          "id": 16582,
+          "text": "!!!!",
+          "logprob": -3.665416717529297
+        },
+        {
+          "id": 11726,
+          "text": "!!!",
+          "logprob": -3.727916717529297
+        }
+      ],
+      "response_start_top25_mass": 0.3263170231999517,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8563358945587458,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 4
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 3
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.7929713979455506,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 15
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 12
+            },
+            {
+              "id": 64700,
+              "text": ":**",
+              "positions": 11
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.7843812079622479,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 159029,
+              "text": ".**",
+              "positions": 2
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 21,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 171458,
+          "text": "!**",
+          "logprob": -3.1098175048828125
+        },
+        {
+          "id": 65737,
+          "text": "!]",
+          "logprob": -3.1723175048828125
+        },
+        {
+          "id": 82586,
+          "text": "!\");",
+          "logprob": -3.7348175048828125
+        },
+        {
+          "id": 11726,
+          "text": "!!!",
+          "logprob": -3.9223175048828125
+        },
+        {
+          "id": 222825,
+          "text": "!”.",
+          "logprob": -3.9848175048828125
+        }
+      ],
+      "response_start_top25_mass": 0.3272675938504455,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8593970773247089,
+          "most_frequent_top1": [
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 4
+            },
+            {
+              "id": 30,
+              "text": "?",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8084511504627537,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 16
+            },
+            {
+              "id": 64700,
+              "text": ":**",
+              "positions": 14
+            },
+            {
+              "id": 31541,
+              "text": "?\\",
+              "positions": 10
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.8124948662928705,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 3
+            },
+            {
+              "id": 373,
+              "text": "�",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 22,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 97237,
+          "text": "用户",
+          "logprob": -0.48328399658203125
+        },
+        {
+          "id": 1156,
+          "text": " user",
+          "logprob": -2.2957839965820312
+        },
+        {
+          "id": 846,
+          "text": "user",
+          "logprob": -3.1707839965820312
+        },
+        {
+          "id": 2570,
+          "text": " User",
+          "logprob": -3.2957839965820312
+        },
+        {
+          "id": 13473,
+          "text": " USER",
+          "logprob": -3.6707839965820312
+        }
+      ],
+      "response_start_top25_mass": 0.9545510959585726,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.85881597735565,
+          "most_frequent_top1": [
+            {
+              "id": 478,
+              "text": " +",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            },
+            {
+              "id": 6889,
+              "text": ".\\",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8593025228787426,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 20
+            },
+            {
+              "id": 4087,
+              "text": " answer",
+              "positions": 12
+            },
+            {
+              "id": 21134,
+              "text": " Answer",
+              "positions": 9
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.8609159173958848,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 3
+            },
+            {
+              "id": 103711,
+              "text": "数学",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 23,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 97237,
+          "text": "用户",
+          "logprob": -1.037130355834961
+        },
+        {
+          "id": 1156,
+          "text": " user",
+          "logprob": -1.412130355834961
+        },
+        {
+          "id": 846,
+          "text": "user",
+          "logprob": -2.349630355834961
+        },
+        {
+          "id": 2570,
+          "text": " User",
+          "logprob": -2.599630355834961
+        },
+        {
+          "id": 109501,
+          "text": "用户的",
+          "logprob": -3.287130355834961
+        }
+      ],
+      "response_start_top25_mass": 0.9432217317877846,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8053095807217364,
+          "most_frequent_top1": [
+            {
+              "id": 478,
+              "text": " +",
+              "positions": 3
+            },
+            {
+              "id": 21134,
+              "text": " Answer",
+              "positions": 2
+            },
+            {
+              "id": 10926,
+              "text": " answers",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8734290146004265,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 19
+            },
+            {
+              "id": 31626,
+              "text": " reasoning",
+              "positions": 14
+            },
+            {
+              "id": 4087,
+              "text": " answer",
+              "positions": 10
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9216243526520288,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 2
+            },
+            {
+              "id": 134351,
+              "text": "相加",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 24,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 1156,
+          "text": " user",
+          "logprob": -1.2968254089355469
+        },
+        {
+          "id": 97237,
+          "text": "用户",
+          "logprob": -1.4218254089355469
+        },
+        {
+          "id": 2570,
+          "text": " User",
+          "logprob": -2.109325408935547
+        },
+        {
+          "id": 846,
+          "text": "user",
+          "logprob": -2.609325408935547
+        },
+        {
+          "id": 198321,
+          "text": " пользователь",
+          "logprob": -3.359325408935547
+        }
+      ],
+      "response_start_top25_mass": 0.9120297881680887,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8480892234239998,
+          "most_frequent_top1": [
+            {
+              "id": 478,
+              "text": " +",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            },
+            {
+              "id": 8311,
+              "text": " happens",
+              "positions": 1
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.8908097937648786,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 20
+            },
+            {
+              "id": 31626,
+              "text": " reasoning",
+              "positions": 16
+            },
+            {
+              "id": 21134,
+              "text": " Answer",
+              "positions": 13
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9623700515959309,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 4
+            },
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 134351,
+              "text": "相加",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 25,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 97237,
+          "text": "用户",
+          "logprob": -0.9022064208984375
+        },
+        {
+          "id": 1156,
+          "text": " user",
+          "logprob": -1.7147064208984375
+        },
+        {
+          "id": 109501,
+          "text": "用户的",
+          "logprob": -2.7772064208984375
+        },
+        {
+          "id": 846,
+          "text": "user",
+          "logprob": -2.7772064208984375
+        },
+        {
+          "id": 2570,
+          "text": " User",
+          "logprob": -3.0272064208984375
+        }
+      ],
+      "response_start_top25_mass": 0.9088288235658827,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8826819699600468,
+          "most_frequent_top1": [
+            {
+              "id": 478,
+              "text": " +",
+              "positions": 2
+            },
+            {
+              "id": 12654,
+              "text": " Python",
+              "positions": 1
+            },
+            {
+              "id": 6463,
+              "text": " difference",
+              "positions": 1
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9031192483135814,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 19
+            },
+            {
+              "id": 31626,
+              "text": " reasoning",
+              "positions": 14
+            },
+            {
+              "id": 4087,
+              "text": " answer",
+              "positions": 10
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9698252086765982,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 4
+            },
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 134351,
+              "text": "相加",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 26,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 90700,
+          "text": "Thinking",
+          "logprob": -1.1366567611694336
+        },
+        {
+          "id": 50534,
+          "text": " Thinking",
+          "logprob": -2.2616567611694336
+        },
+        {
+          "id": 97237,
+          "text": "用户",
+          "logprob": -3.0116567611694336
+        },
+        {
+          "id": 79420,
+          "text": "thinking",
+          "logprob": -3.3866567611694336
+        },
+        {
+          "id": 7047,
+          "text": " thinking",
+          "logprob": -3.6366567611694336
+        }
+      ],
+      "response_start_top25_mass": 0.6568355267967562,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9007501227806668,
+          "most_frequent_top1": [
+            {
+              "id": 61446,
+              "text": " concise",
+              "positions": 3
+            },
+            {
+              "id": 478,
+              "text": " +",
+              "positions": 2
+            },
+            {
+              "id": 11316,
+              "text": " sentence",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.923762179004368,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 19
+            },
+            {
+              "id": 5346,
+              "text": " plus",
+              "positions": 10
+            },
+            {
+              "id": 4087,
+              "text": " answer",
+              "positions": 8
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.961896630722741,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 4
+            },
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 29381,
+              "text": " Adding",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 27,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 90700,
+          "text": "Thinking",
+          "logprob": -0.38227081298828125
+        },
+        {
+          "id": 50534,
+          "text": " Thinking",
+          "logprob": -2.1322708129882812
+        },
+        {
+          "id": 7047,
+          "text": " thinking",
+          "logprob": -2.8197708129882812
+        },
+        {
+          "id": 79420,
+          "text": "thinking",
+          "logprob": -3.7572708129882812
+        },
+        {
+          "id": 95530,
+          "text": "-thinking",
+          "logprob": -4.069770812988281
+        }
+      ],
+      "response_start_top25_mass": 0.9342294940353174,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8867333974434698,
+          "most_frequent_top1": [
+            {
+              "id": 17,
+              "text": "2",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            },
+            {
+              "id": 61446,
+              "text": " concise",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9363891709139747,
+          "most_frequent_top1": [
+            {
+              "id": 31626,
+              "text": " reasoning",
+              "positions": 18
+            },
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 16
+            },
+            {
+              "id": 27632,
+              "text": " Draft",
+              "positions": 13
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9731787354796373,
+          "most_frequent_top1": [
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 4
+            },
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 29381,
+              "text": " Adding",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 28,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 1156,
+          "text": " user",
+          "logprob": -0.8633632659912109
+        },
+        {
+          "id": 90700,
+          "text": "Thinking",
+          "logprob": -1.988363265991211
+        },
+        {
+          "id": 97237,
+          "text": "用户",
+          "logprob": -1.988363265991211
+        },
+        {
+          "id": 2570,
+          "text": " User",
+          "logprob": -2.488363265991211
+        },
+        {
+          "id": 846,
+          "text": "user",
+          "logprob": -2.988363265991211
+        }
+      ],
+      "response_start_top25_mass": 0.9730350128895419,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8635989532364302,
+          "most_frequent_top1": [
+            {
+              "id": 17,
+              "text": "2",
+              "positions": 2
+            },
+            {
+              "id": 478,
+              "text": " +",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9526643150612463,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 15
+            },
+            {
+              "id": 31626,
+              "text": " reasoning",
+              "positions": 13
+            },
+            {
+              "id": 27632,
+              "text": " Draft",
+              "positions": 12
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9862890963705017,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 248044,
+              "text": "<|endoftext|>",
+              "positions": 3
+            },
+            {
+              "id": 29381,
+              "text": " Adding",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 29,
+      "workspace_band": true,
+      "response_start_top5": [
+        {
+          "id": 90700,
+          "text": "Thinking",
+          "logprob": -0.246307373046875
+        },
+        {
+          "id": 50534,
+          "text": " Thinking",
+          "logprob": -1.871307373046875
+        },
+        {
+          "id": 7047,
+          "text": " thinking",
+          "logprob": -2.996307373046875
+        },
+        {
+          "id": 79420,
+          "text": "thinking",
+          "logprob": -4.996307373046875
+        },
+        {
+          "id": 34022,
+          "text": " Thought",
+          "logprob": -7.121307373046875
+        }
+      ],
+      "response_start_top25_mass": 0.9952123760212291,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.8895403609280157,
+          "most_frequent_top1": [
+            {
+              "id": 20,
+              "text": "5",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            },
+            {
+              "id": 61446,
+              "text": " concise",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9571809121639876,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 15
+            },
+            {
+              "id": 25,
+              "text": ":",
+              "positions": 10
+            },
+            {
+              "id": 31626,
+              "text": " reasoning",
+              "positions": 10
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9906763599340838,
+          "most_frequent_top1": [
+            {
+              "id": 16327,
+              "text": " equals",
+              "positions": 3
+            },
+            {
+              "id": 17,
+              "text": "2",
+              "positions": 1
+            },
+            {
+              "id": 5346,
+              "text": " plus",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "layer": 30,
+      "workspace_band": false,
+      "response_start_top5": [
+        {
+          "id": 90700,
+          "text": "Thinking",
+          "logprob": -0.02474212646484375
+        },
+        {
+          "id": 50534,
+          "text": " Thinking",
+          "logprob": -4.962242126464844
+        },
+        {
+          "id": 760,
+          "text": "The",
+          "logprob": -5.524742126464844
+        },
+        {
+          "id": 1919,
+          "text": "This",
+          "logprob": -5.962242126464844
+        },
+        {
+          "id": 7047,
+          "text": " thinking",
+          "logprob": -6.774742126464844
+        }
+      ],
+      "response_start_top25_mass": 0.9943960418621779,
+      "spans": {
+        "user_prompt": {
+          "positions": 18,
+          "mean_top25_probability_mass": 0.9407187546461516,
+          "most_frequent_top1": [
+            {
+              "id": 17,
+              "text": "2",
+              "positions": 2
+            },
+            {
+              "id": 248046,
+              "text": "<|im_end|>",
+              "positions": 2
+            },
+            {
+              "id": 61446,
+              "text": " concise",
+              "positions": 2
+            }
+          ]
+        },
+        "cot": {
+          "positions": 239,
+          "mean_top25_probability_mass": 0.9916572003813371,
+          "most_frequent_top1": [
+            {
+              "id": 220,
+              "text": " ",
+              "positions": 18
+            },
+            {
+              "id": 17,
+              "text": "2",
+              "positions": 17
+            },
+            {
+              "id": 13,
+              "text": ".",
+              "positions": 14
+            }
+          ]
+        },
+        "answer": {
+          "positions": 9,
+          "mean_top25_probability_mass": 0.9995933784787042,
+          "most_frequent_top1": [
+            {
+              "id": 17,
+              "text": "2",
+              "positions": 2
+            },
+            {
+              "id": 5346,
+              "text": " plus",
+              "positions": 1
+            },
+            {
+              "id": 220,
+              "text": " ",
+              "positions": 1
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "answer_anchor": {
+    "position": 280,
+    "input_text": " plus",
+    "layers": [
+      {
+        "layer": 12,
+        "top5": [
+          {
+            "id": 2423,
+            "text": " ...",
+            "logprob": -0.8058319091796875
+          },
+          {
+            "id": 46571,
+            "text": " [...]",
+            "logprob": -1.3058319091796875
+          },
+          {
+            "id": 1076,
+            "text": "...",
+            "logprob": -1.4308319091796875
+          },
+          {
+            "id": 63558,
+            "text": " (...)",
+            "logprob": -4.4308319091796875
+          },
+          {
+            "id": 20564,
+            "text": "...\"",
+            "logprob": -5.1808319091796875
+          }
+        ]
+      },
+      {
+        "layer": 16,
+        "top5": [
+          {
+            "id": 248044,
+            "text": "<|endoftext|>",
+            "logprob": -0.2668285369873047
+          },
+          {
+            "id": 248046,
+            "text": "<|im_end|>",
+            "logprob": -5.266828536987305
+          },
+          {
+            "id": 135998,
+            "text": "加法",
+            "logprob": -5.766828536987305
+          },
+          {
+            "id": 33633,
+            "text": " arithmetic",
+            "logprob": -6.204328536987305
+          },
+          {
+            "id": 98815,
+            "text": "或者",
+            "logprob": -6.954328536987305
+          }
+        ]
+      },
+      {
+        "layer": 20,
+        "top5": [
+          {
+            "id": 16327,
+            "text": " equals",
+            "logprob": -0.5370903015136719
+          },
+          {
+            "id": 6950,
+            "text": "equals",
+            "logprob": -2.849590301513672
+          },
+          {
+            "id": 102149,
+            "text": "等于",
+            "logprob": -3.662090301513672
+          },
+          {
+            "id": 135998,
+            "text": "加法",
+            "logprob": -4.787090301513672
+          },
+          {
+            "id": 4174,
+            "text": "Equals",
+            "logprob": -4.849590301513672
+          }
+        ]
+      },
+      {
+        "layer": 24,
+        "top5": [
+          {
+            "id": 16327,
+            "text": " equals",
+            "logprob": -0.06213951110839844
+          },
+          {
+            "id": 102149,
+            "text": "等于",
+            "logprob": -3.6871395111083984
+          },
+          {
+            "id": 6950,
+            "text": "equals",
+            "logprob": -3.6871395111083984
+          },
+          {
+            "id": 4174,
+            "text": "Equals",
+            "logprob": -5.812139511108398
+          },
+          {
+            "id": 37453,
+            "text": " Equals",
+            "logprob": -6.374639511108398
+          }
+        ]
+      },
+      {
+        "layer": 29,
+        "top5": [
+          {
+            "id": 16327,
+            "text": " equals",
+            "logprob": -0.1922454833984375
+          },
+          {
+            "id": 1330,
+            "text": " two",
+            "logprob": -3.0672454833984375
+          },
+          {
+            "id": 220,
+            "text": " ",
+            "logprob": -3.6297454833984375
+          },
+          {
+            "id": 5951,
+            "text": " equal",
+            "logprob": -3.9422454833984375
+          },
+          {
+            "id": 6950,
+            "text": "equals",
+            "logprob": -5.1297454833984375
+          }
+        ]
+      },
+      {
+        "layer": 30,
+        "top5": [
+          {
+            "id": 220,
+            "text": " ",
+            "logprob": -0.009960174560546875
+          },
+          {
+            "id": 1330,
+            "text": " two",
+            "logprob": -5.009960174560547
+          },
+          {
+            "id": 16327,
+            "text": " equals",
+            "logprob": -7.447460174560547
+          },
+          {
+            "id": 16570,
+            "text": " twenty",
+            "logprob": -9.259960174560547
+          },
+          {
+            "id": 10598,
+            "text": " twice",
+            "logprob": -9.384960174560547
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -16,11 +16,25 @@ between cached generation and full-sequence replay. Raw RunPod result files,
 runtimes and memory measurements were not supplied; this update records the
 user's report, not a GPU run executed by this Codex environment.
 
-The new [single-example path](single-example.md) saves generation tokens/raw
-probabilities, boundaries, bounded per-token/per-layer lens readouts and replay
-diagnostics. Its random-model CPU tests are separate from pretrained GPU
-validation, which still needs to run on RunPod. Stock Inspect HF's capture
-limitations remain; this path uses plain Transformers instead.
+The uploaded **`single-example-001.zip`** now provides saved-output evidence of
+one successful thinking generation and exact-ID replay on an **NVIDIA A40**.
+Independent CPU artifact checks confirmed sequence/checksum/text consistency and
+complete layer/position coverage; this Codex session did not execute a GPU run.
+
+- 39 prompt + 249 generated tokens; EOS termination; valid reasoning/answer spans.
+- Raw sampled-token log-probability differences: median **3.8147e-6 nats**,
+  p99 **0.0778354**, maximum **0.117702**; no 0.5-nat or persistent-jump flags.
+- **8,928** lens readouts: 31 fitted layers × 288 positions. Early response-start
+  layers are punctuation-heavy; later layers contain user/thinking-related tokens.
+- Generation **13.96 s**, replay/readouts **8.42 s**, peak allocated **7.950 GiB**.
+- Recorded script checksum matches the repository, although the run's worktree
+  was dirty. Driver version and full transitive dependency freeze were not supplied.
+
+See the [diagnostic report](results/single-example-001.md) and
+[machine-readable summary](results/single-example-001-summary.json) for evidence,
+per-layer readouts, limitations and source hashes. This validates one technical
+path, not persuasion/manipulation separation or the full pilot. Stock Inspect
+HF's capture limitations remain; this path uses plain Transformers instead.
 
 The following sections preserve the original artifact/API investigation; their
 CPU-only evidence predates the user-reported RunPod Step 0 results.
@@ -181,8 +195,9 @@ model parameters alone would take approximately 15.7 GiB.
    assistant turn and record incomplete cases explicitly.
 4. Model/lens dimensions and source compatibility are established. The user now
    reports the pretrained forward, boot example, multihop and exact-ID checks
-   passed on RunPod. Generated reasoning, cached-generation/full-replay numerical
-   differences and this new path's GPU peak memory remain **unverified on RunPod**.
+   passed on RunPod. The uploaded single-example artifacts now also document
+   generated reasoning, cache/full-pass numerical agreement and GPU memory for
+   one bf16 run; broader reliability remains untested.
    A 0.5-nat threshold has not been calibrated. Float32 costs twice the model
    parameter memory and may exceed the original 16 GB budget.
 5. `apply`'s default truncation violates lossless long replay. Lens source
@@ -203,8 +218,10 @@ model parameters alone would take approximately 15.7 GiB.
 ## Blockers and next smallest step
 
 RunPod GPU access is now working according to the user; this Codex machine
-still has no GPU connection. The next required execution is the new
-[single-example generation/replay validation](single-example.md) on RunPod.
+still has no GPU connection. The uploaded run documents successful
+[single-example generation/replay validation](results/single-example-001.md).
+A clean-checkout repeat with a dependency freeze and driver record is the next
+small reproducibility check; no full dataset or evaluation is implied.
 The old Inspect capture limitation is avoided by the plain Transformers path.
 No missing HF credential was found: the required artifacts are public and downloads worked unauthenticated.
 
@@ -216,10 +233,11 @@ cd /workspace/manipulation-jspace-pilot
 source /workspace/jspace-gpu-clean/bin/activate
 export HF_HOME=/workspace/.cache/huggingface
 export OMP_NUM_THREADS=2
-python scripts/single_example.py --device cuda --output-dir outputs/single-example-001
+python scripts/single_example.py --device cuda --output-dir outputs/single-example-002
 ```
 
-This **new generation/replay command has not yet been GPU-tested here**. Check
+This command was **not executed on GPU by Codex**; the uploaded RunPod outputs
+provide the GPU evidence. Use a new output directory for a repeat. Check
 `manifest.json`, `transcript.json`, `replay_validation.json` and
 `lens_readouts.jsonl`, especially exact token identity, thinking/answer span
 eligibility and numerical differences. Do not start the dataset, judges or
