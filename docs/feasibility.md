@@ -1,11 +1,29 @@
 # J-space pilot: feasibility assessment
 
-Assessed 15 October 2026 against `pilot_spec_15_10.md`. **Conditional go for a
-one-example GPU validation; not yet a go for the pilot.** The exact artifacts
-exist and their dimensions agree. Exact-ID lens readout is feasible through
-existing hooks. Stock Inspect HF output cannot satisfy the specified replay
-contract. No GPU is exposed here (`torch.cuda.is_available() == False`, zero
-devices); no pretrained-model forward or generation has been executed.
+The original assessment below used `pilot_spec_15_10.md`. The authoritative
+specification is now **`pilot_spec_26_10_2.md`**. Step 0 has passed on RunPod,
+according to the user's reported results:
+
+| GPU check | User-reported RunPod result |
+| --- | --- |
+| Upstream boot/currency walkthrough, position -2 | Italy reached **rank 1 at layer 12**. |
+| Ten multihop items | **7/10** intermediate concepts recovered in the top 10 at some fitted layer. |
+| Exact-ID hooks versus `lens.apply` | **PASS**, zero numerical error across all tested layers. |
+
+These results support proceeding to **one** captured thinking generation and
+exact-ID replay. They do not validate the full pilot or numerical agreement
+between cached generation and full-sequence replay. Raw RunPod result files,
+runtimes and memory measurements were not supplied; this update records the
+user's report, not a GPU run executed by this Codex environment.
+
+The new [single-example path](single-example.md) saves generation tokens/raw
+probabilities, boundaries, bounded per-token/per-layer lens readouts and replay
+diagnostics. Its random-model CPU tests are separate from pretrained GPU
+validation, which still needs to run on RunPod. Stock Inspect HF's capture
+limitations remain; this path uses plain Transformers instead.
+
+The following sections preserve the original artifact/API investigation; their
+CPU-only evidence predates the user-reported RunPod Step 0 results.
 
 ## Verified facts
 
@@ -15,7 +33,7 @@ devices); no pretrained-model forward or generation has been executed.
 | --- | --- |
 | `Qwen/Qwen3.5-4B` | HF API returns public, ungated model at commit `851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a`. Config and tokenizer downloaded; both weight shards return successful Hub file metadata requests. Full model weights were **not** downloaded. |
 | Specified lens | The exact path below exists on `qwen-n1000`, resolved to commit `16a01f309fcec900fdcec3f4cd5b64f3d00e4d5a`. Downloaded all 406,332,644 bytes and loaded with `JacobianLens.from_pretrained`. SHA-256 matches the Hub ETag: `1f9a8f8fd593f0ffec1a9640993257ca4560f8ae3e5602315643d5cc6818534e`. |
-| Compatibility | Model text config: 32 layers, width 2,560, vocabulary 248,320. Lens: width 2,560, 1,000 fitting prompts, 31 finite matrices of shape `[2560,2560]`, layers **0–30**. This is the exact pairing named in the upstream walkthrough. Shape and documented pairing are verified; useful pretrained readouts and compatibility with the precise model weight revision remain untested. |
+| Compatibility | Model text config: 32 layers, width 2,560, vocabulary 248,320. Lens: width 2,560, 1,000 fitting prompts, 31 finite matrices of shape `[2560,2560]`, layers **0–30**. This is the exact pairing named in the upstream walkthrough. Shape and documented pairing are verified. The user-reported RunPod Step 0 results above now also support useful pretrained readouts and exact-ID compatibility; fitting-revision provenance remains unavailable. |
 
 Exact lens path (unchanged from the specification):
 
@@ -47,7 +65,8 @@ by default. Its output is logits, not log-probabilities: each layer maps to
 `[selected_positions, vocabulary]`; use `log_softmax(..., dim=-1)` for scores.
 The notebook uses the boot/currency prompt at **position -2**, not -1. Its
 multihop evaluation file and documented min-over-layers rank metric exist;
-neither their expected ranks nor the Italy/Rome readouts were tested here.
+the initial CPU investigation did not execute them. The later user-reported
+RunPod results are recorded above.
 
 There is **no direct token-ID argument to `apply`**. Existing APIs permit a small
 caller-side implementation without modifying upstream: capture block outputs
@@ -160,50 +179,51 @@ model parameters alone would take approximately 15.7 GiB.
    user text or repeated output can create additional occurrences. Thinking ON
    does not guarantee a nonempty reasoning span. Bound checks to the relevant
    assistant turn and record incomplete cases explicitly.
-4. Model/lens dimensions and source compatibility are established, but the
-   pretrained forward, boot example, ten multihop ranks, generated reasoning,
-   bf16/cache numerical differences and GPU peak memory remain **unrun**.
+4. Model/lens dimensions and source compatibility are established. The user now
+   reports the pretrained forward, boot example, multihop and exact-ID checks
+   passed on RunPod. Generated reasoning, cached-generation/full-replay numerical
+   differences and this new path's GPU peak memory remain **unverified on RunPod**.
    A 0.5-nat threshold has not been calibrated. Float32 costs twice the model
    parameter memory and may exceed the original 16 GB budget.
 5. `apply`'s default truncation violates lossless long replay. Lens source
-   layers exclude the final layer. Define zero-based workspace-band rounding
-   explicitly and intersect it with fitted layers. The upstream notebook's
+   layers exclude the final layer. The authoritative specification now fixes
+   workspace layers to 12–29, within the fitted layers 0–30. The upstream notebook's
    final cell **fits a new lens**; executing every cell is unnecessary setup.
 6. The pinned model is a hybrid linear/full-attention architecture. Transformers
    >=5.5 is a jlens dependency. Its source supplies a Torch fallback, so
    `flash-linear-attention` and `causal-conv1d` are optional accelerators, not
    required for the CPU interface checks. GPU performance is untested.
-7. The primary **concealment** score is missing from section 7's named analysis
-   list. Section 6 also needs to specify how to handle words with only one valid
-   single-token form and when to maximize over space/no-space forms. These are
-   specification ambiguities, not changes made to the experiment. APE paths,
-   Docent APIs, paper-band claims and future 27B hardware were not independently
-   validated; they are outside this first setup's execution scope.
+7. The original concealment-score omission and token-variant ambiguities were
+   resolved in the authoritative specification: section 7 now includes the
+   primary concealment score, and section 6 defines the one-valid-variant case.
+   APE paths, Docent APIs, paper-band claims and future 27B hardware remain outside
+   this first execution scope.
+
 
 ## Blockers and next smallest step
 
-The remaining execution blocker is **GPU access**, plus the known Inspect
-capture limitation before an exact replay test. No missing HF credential was
-found: the required artifacts are public and downloads worked unauthenticated.
+RunPod GPU access is now working according to the user; this Codex machine
+still has no GPU connection. The next required execution is the new
+[single-example generation/replay validation](single-example.md) on RunPod.
+The old Inspect capture limitation is avoided by the plain Transformers path.
+No missing HF credential was found: the required artifacts are public and downloads worked unauthenticated.
 
-Use the existing isolated checkout; do not create a worktree. Current setup:
+Use the existing checkout on RunPod and the clean GPU environment documented in
+[gpu-validation.md](gpu-validation.md). Run exactly one example:
 
 ```bash
 cd /workspace/manipulation-jspace-pilot
-source /workspace/.venvs/jspace-pilot/bin/activate
+source /workspace/jspace-gpu-clean/bin/activate
 export HF_HOME=/workspace/.cache/huggingface
 export OMP_NUM_THREADS=2
-python scripts/sanity_check.py
-# On a GPU machine; NOT executed here:
-python scripts/sanity_check.py --run-forward --device cuda
+python scripts/single_example.py --device cuda --output-dir outputs/single-example-001
 ```
 
-The script's optional forward loads the pinned text model and runs a one-position
-exact-ID lens readout; it does not generate text or validate replay. The next
-small task is to run that GPU check and the notebook's boot readout, then capture
-**one** thinking generation with IDs/raw sampled-token probabilities and compare
-one replay before proceeding to the ten multihop checks. Do not start the dataset,
-judges or analysis pipeline yet.
+This **new generation/replay command has not yet been GPU-tested here**. Check
+`manifest.json`, `transcript.json`, `replay_validation.json` and
+`lens_readouts.jsonl`, especially exact token identity, thinking/answer span
+eligibility and numerical differences. Do not start the dataset, judges or
+analysis pipeline yet.
 
 Minimal dependencies are in `requirements.txt`; jlens is pinned to the inspected
 commit. `huggingface-hub` and NumPy arrive through jlens/Transformers; Accelerate
