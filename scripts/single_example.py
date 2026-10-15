@@ -187,9 +187,31 @@ def numerical_diagnostics(generation, replay, threshold):
             "possible_step_change_generated_indices": jumps}
 
 
+def capture_concepts(logits, normalizer, groups):
+    """Gather full-vocabulary probabilities in one device-to-host copy per chunk."""
+    if not groups.get("control") or any(not words for words in groups.values()):
+        raise ValueError("Concept and control groups must be nonempty")
+    selected = sorted({token for words in groups.values() for ids in words.values() for token in ids})
+    offsets = {token: i for i, token in enumerate(selected)}
+    values = (logits[:, selected] - normalizer[:, None]).cpu().tolist()
+    rows = []
+    for values_at_position in values:
+        word_lps = {group: {word: max(values_at_position[offsets[token]] for token in ids)
+                            for word, ids in words.items()} for group, words in groups.items()}
+        control = sum(word_lps["control"].values()) / len(word_lps["control"])
+        concepts = {}
+        for group, words in word_lps.items():
+            if group != "control":
+                mean = sum(words.values()) / len(words)
+                concepts[group] = {"word_logprobs": words, "mean_logprob": mean,
+                                   "control_centered_score": mean - control}
+        rows.append({"control_mean_logprob": control, "groups": concepts})
+    return rows
+
+
 @torch.inference_mode()
 def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshold,
-               original_ids=None):
+               original_ids=None, concept_token_ids=None):
     full = validate_transcript(data, tokenizer, original_ids)
     ids = torch.tensor([full], dtype=torch.long, device=model.input_device)
     if ids.cpu().tolist()[0] != full:
@@ -225,15 +247,20 @@ def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshol
                 values, indices = logits.topk(min(25, logits.shape[-1]), dim=-1)
                 values = (values - normalizer[:, None]).cpu().tolist()
                 indices = indices.cpu().tolist()
+                concept_rows = (capture_concepts(logits, normalizer, concept_token_ids)
+                                if concept_token_ids is not None else None)
                 for offset, (token_ids, logprobs) in enumerate(zip(indices, values)):
                     position = start + offset
-                    stream.write(json.dumps({
+                    row = {
                         "layer": layer, "workspace_band": 12 <= layer <= 29,
                         "position": position, "input_token_id": full[position],
                         "spans": position_roles(position, data["spans"]),
                         "top_tokens": [{"id": token, "token_string": tokenizer.convert_ids_to_tokens(token),
                                         "logprob": lp} for token, lp in zip(token_ids, logprobs)]
-                    }, ensure_ascii=False, allow_nan=False) + "\n")
+                    }
+                    if concept_rows is not None:
+                        row["concept_readouts"] = concept_rows[offset]
+                    stream.write(json.dumps(row, ensure_ascii=False, allow_nan=False) + "\n")
                     records += 1
     generation = data["raw_sampled_logprobs"]
     return {"token_identity": True, "original_generation_checked": original_ids is not None,
@@ -296,6 +323,18 @@ def main():
     user, system = args.prompt.strip(), args.system.strip()
     if not user or not system:
         parser.error("Prompt and system message must be nonempty")
+    if args.output_dir.exists():
+        raise FileExistsError(args.output_dir)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION)
+    hf = AutoModelForCausalLM.from_pretrained(MODEL, revision=MODEL_REVISION,
+                                            dtype=getattr(torch, dtype), device_map=args.device)
+    lens = jlens.JacobianLens.from_pretrained(LENS, filename=LENS_FILE, revision=LENS_REVISION)
+    run_example(args, hf, tokenizer, lens)
+
+
+def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=True):
+    """Shared single-example pipeline; callers may reuse loaded weights across samples."""
+    dtype = args.dtype or ("bfloat16" if args.device == "cuda" else "float32")
     args.output_dir.mkdir(parents=True, exist_ok=False)
     metadata = provenance(args.device, dtype)
     settings = {"max_new_tokens": args.max_new_tokens, "temperature": args.temperature,
@@ -307,12 +346,11 @@ def main():
                 "penalties_and_other_logits_processors": "none"}
     manifest = {"schema_version": 1, "created_at_utc": datetime.now(timezone.utc).isoformat(),
                 "status": "initializing", "provenance": metadata, "generation_settings": settings}
+    if concept_token_ids is not None:
+        manifest["concept_token_ids"] = concept_token_ids
     manifest_path = args.output_dir / "manifest.json"
     write_json(manifest_path, manifest)
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION)
-    messages, prompt, user_positions = prepare_prompt(tokenizer, system, user)
-    hf = AutoModelForCausalLM.from_pretrained(MODEL, revision=MODEL_REVISION,
-                                            dtype=getattr(torch, dtype), device_map=args.device)
+    messages, prompt, user_positions = prepare_prompt(tokenizer, args.system.strip(), args.prompt.strip())
     eos_ids = sorted({tokenizer.eos_token_id, hf.config.get_text_config().eos_token_id} - {None})
     if not eos_ids:
         raise ValueError("No explicit stopping token IDs found")
@@ -349,14 +387,15 @@ def main():
     # Reload the persisted IDs, compare to the actual generation, and replay them directly.
     saved = json.loads(transcript_path.read_text())
     validate_transcript(saved, tokenizer, original_ids)
-    for token in saved["tokens"]:
-        print(json.dumps({"boundary_token": token}, ensure_ascii=False), flush=True)
-    lens = jlens.JacobianLens.from_pretrained(LENS, filename=LENS_FILE, revision=LENS_REVISION)
+    if print_tokens:
+        for token in saved["tokens"]:
+            print(json.dumps({"boundary_token": token}, ensure_ascii=False), flush=True)
     model = jlens.from_hf(hf, tokenizer, force_bos=False)
     sync(args.device)
     start = time.perf_counter()
     validation = replay_one(model, lens, tokenizer, saved, args.output_dir / "lens_readouts.jsonl",
-                            args.position_chunk_size, args.logprob_flag_threshold, original_ids)
+                            args.position_chunk_size, args.logprob_flag_threshold, original_ids,
+                            concept_token_ids=concept_token_ids)
     sync(args.device)
     manifest["replay_seconds"] = time.perf_counter() - start
     write_json(args.output_dir / "replay_validation.json", validation)
@@ -370,6 +409,8 @@ def main():
                       "stop_reason": stop_reason, "spans": saved["spans"],
                       "token_identity": validation["token_identity"],
                       "diagnostics": validation["diagnostics"]}), flush=True)
+
+    return {"manifest": manifest, "transcript": saved, "validation": validation}
 
 
 if __name__ == "__main__":
