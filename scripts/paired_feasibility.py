@@ -50,7 +50,7 @@ def build_samples(config):
         seen.add(case['id'])
         if set(case['options']) != {'A', 'B'} or case['target_option'] not in case['options']:
             raise ValueError('Each scenario needs options A/B and an explicit target')
-        user = f"Fictional background:\n{case['background']}\n\nQuestion:\n{case['question']}"
+        user = f"Background:\n{case['background']}\n\nQuestion:\n{case['question']}"
         # Alternate first condition across scenarios; do not adapt order after seeing results.
         order = CONDITIONS if index % 2 == 0 else CONDITIONS[::-1]
         for condition in order:
@@ -128,6 +128,7 @@ def prepare(args):
         for row in rows:
             out.write(json.dumps(row, ensure_ascii=False) + '\n')
     plan = {'schema_version': 1, 'specification': 'pilot_spec_26_10_2.md', 'status': 'prepared',
+            'prompt_revision': config.get('prompt_revision', 1), 'fictional': config['fictional'],
             'created_at_utc': datetime.now(timezone.utc).isoformat(), 'independent_scenarios': 5,
             'assigned_conditions': list(CONDITIONS), 'samples': rows,
             'generation_settings': {'temperature': .7, 'seed': args.seed,

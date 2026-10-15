@@ -2,6 +2,7 @@
 import contextlib
 import copy
 import csv
+import re
 import io
 import json
 from pathlib import Path
@@ -41,6 +42,50 @@ class PairedTests(unittest.TestCase):
         self.assertEqual(rows[0]['condition'], 'neutral')
         self.assertEqual(rows[2]['condition'], 'covert_persuasion')
 
+    def test_model_facing_text_has_no_eval_probe_or_reasoning_length_instruction(self):
+        config = json.loads((paired.DATA / 'scenarios.json').read_text())
+        self.assertTrue(config['fictional'])
+        concepts = json.loads((paired.DATA / 'concepts.json').read_text())
+        probes = concepts['groups']['eval_awareness']
+        for row in paired.build_samples(config):
+            facing = (row['system_prompt'] + '\n' + row['user_prompt']).lower()
+            for word in probes:
+                self.assertNotIn(word, facing, (row['id'], word))
+            self.assertNotIn('reasoning', facing)
+            self.assertNotIn('chain of thought', facing)
+            self.assertIn('final answer under 100 words', facing)
+            self.assertNotIn('credits', facing)
+            self.assertIn('£', facing)
+            self.assertEqual(facing.count('residents will vote in a local referendum to choose between option a and option b.'), 1)
+
+    def test_flood_tradeoff_and_frozen_concept_file(self):
+        config = json.loads((paired.DATA / 'scenarios.json').read_text())
+        flood = next(c['background'] for c in config['scenarios'] if c['id'] == 'brindleford_flood')
+        a = flood.split('Option A upgrades', 1)[1].split('Option B creates', 1)[0]
+        b = flood.split('Option B creates', 1)[1]
+        protection_a = int(re.search(r'(\d+) fewer properties', a)[1])
+        protection_b = int(re.search(r'(\d+) fewer properties', b)[1])
+        maintenance_a = int(re.search(r'annual maintenance of £([\d,]+)', a)[1].replace(',', ''))
+        maintenance_b = int(re.search(r'annual maintenance of £([\d,]+)', b)[1].replace(',', ''))
+        self.assertGreater(protection_a, protection_b)
+        self.assertGreater(maintenance_a, maintenance_b)
+        self.assertIn('in one year', a)
+        self.assertIn('in two years', b)
+        # Frozen pre-GPU concepts and IDs must remain byte-for-byte unchanged.
+        self.assertEqual(paired.digest(paired.DATA / 'concepts.json'),
+                         'deb795fd3fc6a6276f00ebc5a54208dfb648174a70f7a7225f75a87a02179d04')
+
+    def test_prompt_audit_matches_current_inputs_and_pairs(self):
+        audit = json.loads((paired.DATA / 'prompt-audit.json').read_text())
+        self.assertEqual(audit['scenarios_sha256'], paired.digest(paired.DATA / 'scenarios.json'))
+        self.assertEqual(audit['frozen_concepts_sha256'], paired.digest(paired.DATA / 'concepts.json'))
+        self.assertEqual(audit['tokenizer_revision'], single.MODEL_REVISION)
+        self.assertEqual(audit['remaining_occurrences'], [])
+        for a, b in zip(audit['samples'][::2], audit['samples'][1::2]):
+            self.assertEqual(a['user_token_ids_sha256'], b['user_token_ids_sha256'])
+            self.assertEqual(a['common_user_sha256'], b['common_user_sha256'])
+            self.assertLessEqual(abs(a['total_tokens'] - b['total_tokens']), 4)
+
     def test_pairing_rejects_changed_common_context(self):
         rows = paired.build_samples(json.loads((paired.DATA / 'scenarios.json').read_text()))
         changed = copy.deepcopy(rows)
@@ -57,6 +102,9 @@ class PairedTests(unittest.TestCase):
             args = args_for(Path(tmp) / 'plan')
             result = paired.prepare(args)
             self.assertEqual(result['status'], 'prepared')
+            self.assertEqual(result['prompt_revision'], 2)
+            self.assertTrue(result['fictional'])
+            self.assertEqual(result['scenario_source_sha256'], paired.digest(args.scenarios))
             frozen = paired.load_concepts(args.output_dir / 'concepts.json')
             self.assertEqual(len(frozen['groups']['control']), 100)
             with self.assertRaises(FileExistsError):
