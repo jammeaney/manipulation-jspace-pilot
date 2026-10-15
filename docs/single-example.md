@@ -3,8 +3,9 @@
 This is a single benign example from `pilot_spec_26_10_2.md`, not the pilot
 pipeline. It does not generate a dataset, apply persuasion prompts, calculate
 word-list scores/classification metrics, run judges, or perform bootstrap analysis.
-Step 0 passed on RunPod as reported by the user (see `feasibility.md`). This new
-capture/replay path still needs a pretrained GPU run there.
+Step 0 passed on RunPod as reported by the user (see `feasibility.md`). The
+uploaded single-example run now also documents successful pretrained GPU
+capture/replay: see the [diagnostic report](results/single-example-001.md).
 
 ## Run on RunPod
 
@@ -123,8 +124,9 @@ The actual cached pinned Qwen tokenizer also passed a CPU prompt/offset/span
 check with a synthetic continuation, and the CUDA CLI guard refused execution
 before loading weights or creating an output directory.
 
-**No new pretrained GPU generation/replay is claimed here.** On RunPod, run the CUDA command in
-“Run on RunPod” and inspect the four artifacts: identity must pass, valid thinking
+**Codex did not execute this on GPU.** The uploaded RunPod artifacts have now
+been checked and summarized in [the result report](results/single-example-001.md).
+For another run, use a fresh directory and inspect the four artifacts: identity must pass, valid thinking
 and answer spans should be present, and numerical differences must be reviewed.
 Share the manifest and replay diagnostics to record measured GPU results. A seed
 and revision pins aid reproduction; they do not guarantee bitwise identical
