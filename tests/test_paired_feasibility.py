@@ -19,7 +19,7 @@ import test_single_example as existing
 
 def args_for(path):
     return SimpleNamespace(output_dir=path, scenarios=paired.DATA / 'scenarios.json',
-        concepts=paired.DATA / 'concepts.json', seed=42, max_new_tokens=8,
+        concepts=paired.DATA / 'concepts.json', seed=42, temperature=1.0, max_new_tokens=8,
         position_chunk_size=2, device='cpu', dtype='float32')
 
 
@@ -250,6 +250,29 @@ class PairedTests(unittest.TestCase):
         self.assertEqual(result['mean_paired_score_delta'], 2.)
         self.assertEqual(result['included_scenarios'], 'one')
 
+    def test_cli_temperature_reaches_generation_and_experiment_manifest(self):
+        concepts = paired.load_concepts(paired.DATA / 'concepts.json')
+        for mode in ('prepare', 'run'):
+            for flags, expected in [(['--temperature', '0.6'], 0.6), ([], 1.0)]:
+                with self.subTest(mode=mode, flags=flags), tempfile.TemporaryDirectory() as tmp:
+                    output = Path(tmp) / 'experiment'
+                    argv = ['paired_feasibility.py', mode, '--output-dir', str(output),
+                            '--device', 'cpu'] + flags
+                    with patch('sys.argv', argv), \
+                         patch.object(paired.AutoTokenizer, 'from_pretrained'), \
+                         patch.object(paired.AutoModelForCausalLM, 'from_pretrained'), \
+                         patch.object(paired.jlens.JacobianLens, 'from_pretrained'), \
+                         patch.object(paired, 'load_concepts', return_value=concepts), \
+                         patch.object(paired.single, 'run_example') as generate, \
+                         patch.object(paired, 'summarize'), \
+                         contextlib.redirect_stdout(io.StringIO()):
+                        paired.main()
+                    manifest = json.loads((output / 'experiment.json').read_text())
+                    self.assertEqual(manifest['generation_settings']['temperature'], expected)
+                    self.assertEqual(generate.call_count, 10 if mode == 'run' else 0)
+                    for call in generate.call_args_list:
+                        self.assertEqual(call.args[0].temperature, expected)
+
     def test_run_delegates_ten_samples_with_one_load_and_summarizes(self):
         concepts = paired.load_concepts(paired.DATA / 'concepts.json')['groups']
         vocabulary = {word: ids for words in concepts.values() for word, ids in words.items()}
@@ -273,7 +296,7 @@ class PairedTests(unittest.TestCase):
                 'concept_token_ids': concept_token_ids,
                 'provenance': {'model_revision': single.MODEL_REVISION,
                                'tokenizer_revision': single.MODEL_REVISION, 'lens_revision': single.LENS_REVISION},
-                'generation_settings': {'temperature': .7, 'seed': args.seed, 'max_new_tokens': args.max_new_tokens,
+                'generation_settings': {'temperature': args.temperature, 'seed': args.seed, 'max_new_tokens': args.max_new_tokens,
                                         'position_chunk_size': args.position_chunk_size, 'logprob_flag_threshold': .5},
                 'generation_seconds': 0., 'replay_seconds': 0.}
             validation = {'replayed_ids_sha256': data['ids_sha256'], 'token_identity': True,

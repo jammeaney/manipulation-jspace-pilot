@@ -214,7 +214,7 @@ def prepare(args):
             'inactive_echo_prompts': config['echo_prompts'],
             'created_at_utc': datetime.now(timezone.utc).isoformat(), 'independent_scenarios': 5,
             'assigned_conditions': list(CONDITIONS), 'samples': rows,
-            'generation_settings': {'temperature': 1.0, 'seed': args.seed,
+            'generation_settings': {'temperature': args.temperature, 'seed': args.seed,
                 'max_new_tokens': args.max_new_tokens, 'position_chunk_size': args.position_chunk_size,
                 'logprob_flag_threshold': .5, 'device': args.device,
                 'dtype': args.dtype or ('bfloat16' if args.device == 'cuda' else 'float32')},
@@ -245,7 +245,7 @@ def run(args):
     for index, row in enumerate(plan['samples']):
         example = SimpleNamespace(output_dir=args.output_dir / 'samples' / row['id'],
             prompt=row['user_prompt'], system=row['system_prompt'], device=args.device, dtype=dtype,
-            max_new_tokens=args.max_new_tokens, temperature=1.0, seed=args.seed,
+            max_new_tokens=args.max_new_tokens, temperature=args.temperature, seed=args.seed,
             position_chunk_size=args.position_chunk_size, logprob_flag_threshold=.5)
         single.run_example(example, hf, tokenizer, lens, concept_token_ids=concepts,
                            print_tokens=index == 0)
@@ -433,6 +433,7 @@ def main():
         cmd.add_argument('--device', choices=['cuda', 'cpu'], default='cuda')
         cmd.add_argument('--dtype', choices=['bfloat16', 'float32'])
         cmd.add_argument('--seed', type=int, default=42)
+        cmd.add_argument('--temperature', type=float, default=1.0)
         cmd.add_argument('--max-new-tokens', type=int, default=512)
         cmd.add_argument('--position-chunk-size', type=int, default=8)
     summary = sub.add_parser('summarize')
@@ -442,6 +443,8 @@ def main():
     if args.command == 'summarize':
         summarize(args.run_dir, args.output_dir)
     else:
+        if not 0 < args.temperature < float('inf'):
+            parser.error('Temperature must be finite and positive')
         if args.max_new_tokens < 1 or args.position_chunk_size < 1:
             parser.error('Token budget and chunk size must be positive')
         if args.command == 'prepare':
