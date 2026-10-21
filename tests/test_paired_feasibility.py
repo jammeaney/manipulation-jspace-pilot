@@ -247,6 +247,10 @@ class PairedTests(unittest.TestCase):
         self.assertEqual(missing['n_pairs'], 0)
         self.assertIsNone(missing['mean_paired_score_delta'])
         self.assertEqual(result['n_pairs'], 1)
+        self.assertEqual(result['n_samples'], 2)
+        self.assertEqual(result['n_neutral'], 1)
+        self.assertEqual(result['n_covert'], 1)
+        self.assertEqual(missing['n_samples'], 0)
         self.assertEqual(result['mean_paired_score_delta'], 2.)
         self.assertEqual(result['included_scenarios'], 'one')
 
@@ -274,6 +278,12 @@ class PairedTests(unittest.TestCase):
                         self.assertEqual(call.args[0].temperature, expected)
 
     def test_run_delegates_ten_samples_with_one_load_and_summarizes(self):
+        self.check_run_size(5)
+
+    def test_single_scenario_counts_and_eligible_aggregates(self):
+        self.check_run_size(1)
+
+    def check_run_size(self, scenario_count):
         concepts = paired.load_concepts(paired.DATA / 'concepts.json')['groups']
         vocabulary = {word: ids for words in concepts.values() for word, ids in words.items()}
         class FrozenTokenizer:
@@ -288,6 +298,9 @@ class PairedTests(unittest.TestCase):
             full = prompt + generated
             spans = {'response_start': 1, 'user_prompt_positions': [0], 'cot': [2, 3],
                      'answer': [3, 4], 'span_analysis_eligible': True, 'flags': []}
+            if scenario_count == 1 and covert:
+                # Retain coordinates to verify eligibility is enforced explicitly.
+                spans.update(span_analysis_eligible=False, flags=['extra_closing_delimiter'])
             data = {'messages': [{'role': 'system', 'content': args.system}, {'role': 'user', 'content': args.prompt}],
                     'prompt_ids': prompt, 'generated_ids': generated, 'full_ids': full,
                     'ids_sha256': single.ids_hash(full), 'generated_text': 'fixture',
@@ -316,22 +329,45 @@ class PairedTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             args = args_for(Path(tmp) / 'run')
+            config = json.loads(args.scenarios.read_text())
+            config['scenarios'] = config['scenarios'][:scenario_count]
+            args.scenarios = Path(tmp) / 'scenarios.json'
+            single.write_json(args.scenarios, config)
+            output = io.StringIO()
             with patch.object(paired.AutoTokenizer, 'from_pretrained', return_value=FrozenTokenizer()) as t, \
                  patch.object(paired.AutoModelForCausalLM, 'from_pretrained', return_value=object()) as h, \
                  patch.object(paired.jlens.JacobianLens, 'from_pretrained', return_value=object()) as l, \
                  patch.object(paired.single, 'run_example', side_effect=fake_example) as run_one, \
-                 contextlib.redirect_stdout(io.StringIO()):
+                 contextlib.redirect_stdout(output):
                 paired.run(args)
-            self.assertEqual([t.call_count, h.call_count, l.call_count, run_one.call_count], [1, 1, 1, 10])
+            self.assertEqual([t.call_count, h.call_count, l.call_count, run_one.call_count], [1, 1, 1, 2 * scenario_count])
             summary = json.loads((args.output_dir / 'summaries/summary.json').read_text())
             self.assertFalse(summary['behavioural_outcomes_evaluated'])
+            self.assertEqual(summary['generations'], 2 * scenario_count)
+            self.assertEqual(summary['independent_scenarios'], scenario_count)
+            plan = json.loads((args.output_dir / 'experiment.json').read_text())
+            self.assertEqual(plan['independent_scenarios'], scenario_count)
+            progress = [json.loads(line) for line in output.getvalue().splitlines()]
+            self.assertEqual([r['total'] for r in progress if 'completed' in r],
+                             [2 * scenario_count] * (2 * scenario_count))
+            self.assertEqual(progress[-1]['samples'], 2 * scenario_count)
+            for condition, stats in summary['condition_summary'].items():
+                self.assertEqual(stats['samples'], scenario_count)
+                self.assertEqual(stats['mean_generated_tokens_n_samples'], scenario_count)
+                expected = 0 if scenario_count == 1 and condition == 'covert_persuasion' else scenario_count
+                self.assertEqual(stats['workspace_eligible_samples']['concealment_cot'], expected)
             self.assertEqual(len(summary['workspace_paired_comparisons']), 12)
             for comparison in summary['workspace_paired_comparisons']:
-                self.assertEqual(comparison['n_pairs'], 5)
-                self.assertEqual(comparison['mean_paired_score_delta'], 1.)
+                eligible = not (scenario_count == 1 and comparison['span'] in ('cot', 'answer'))
+                self.assertEqual(comparison['n_pairs'], scenario_count if eligible else 0)
+                self.assertEqual(comparison['n_samples'], 2 * scenario_count if eligible else 0)
+                if eligible:
+                    self.assertEqual(comparison['mean_paired_score_delta'], 1.)
+                else:
+                    self.assertIsNone(comparison['mean_paired_score_delta'])
             with (args.output_dir / 'summaries/samples.csv').open() as stream:
                 samples = list(csv.DictReader(stream))
-            self.assertEqual(len(samples), 10)
+            self.assertEqual(len(samples), 2 * scenario_count)
             self.assertTrue(all(s['behavioural_outcome'] == '' for s in samples))
             # Duplicate readouts cannot silently change a layer/span average.
             sample_id = next((args.output_dir / 'samples').iterdir())
