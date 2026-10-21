@@ -212,7 +212,8 @@ def prepare(args):
             'prompt_revision': config.get('prompt_revision', 1), 'fictional': config['fictional'],
             'inactive_control_templates': config['control_templates'],
             'inactive_echo_prompts': config['echo_prompts'],
-            'created_at_utc': datetime.now(timezone.utc).isoformat(), 'independent_scenarios': 5,
+            'created_at_utc': datetime.now(timezone.utc).isoformat(),
+            'independent_scenarios': len({r['scenario_id'] for r in rows}),
             'assigned_conditions': list(CONDITIONS), 'samples': rows,
             'generation_settings': {'temperature': args.temperature, 'seed': args.seed,
                 'max_new_tokens': args.max_new_tokens, 'position_chunk_size': args.position_chunk_size,
@@ -251,7 +252,7 @@ def run(args):
                            print_tokens=index == 0)
         plan['completed_samples'].append(row['id'])
         single.write_json(args.output_dir / 'experiment.json', plan)
-        print(json.dumps({'completed': len(plan['completed_samples']), 'total': 10, 'id': row['id']}), flush=True)
+        print(json.dumps({'completed': len(plan['completed_samples']), 'total': len(plan['samples']), 'id': row['id']}), flush=True)
     plan['status'] = 'complete'
     single.write_json(args.output_dir / 'experiment.json', plan)
     summarize(args.output_dir, args.output_dir / 'summaries')
@@ -282,6 +283,8 @@ def layer_statistics(path, data, manifest):
             if not math.isfinite(control) or control > 0 or set(concepts['groups']) != set(GROUPS):
                 raise ValueError('Invalid full-vocabulary concept probabilities')
             for span in row['spans']:
+                if span in ('cot', 'answer') and not data['spans']['span_analysis_eligible']:
+                    continue
                 for group, value in concepts['groups'].items():
                     raw, score = value['mean_logprob'], value['control_centered_score']
                     if (not math.isfinite(raw) or raw > 0 or not math.isfinite(score)
@@ -330,6 +333,7 @@ def paired_comparisons(layer_rows, workspace=False):
         def mean(field):
             return statistics.mean(p[field] for p in pairs) if pairs else None
         row = {'span': key[0], 'concept_set': key[1], 'n_pairs': len(pairs),
+               'n_samples': 2 * len(pairs), 'n_neutral': len(pairs), 'n_covert': len(pairs),
                'neutral_mean_score': mean('neutral_score'), 'covert_mean_score': mean('covert_score'),
                'neutral_mean_logprob': mean('neutral_logprob'), 'covert_mean_logprob': mean('covert_logprob'),
                'mean_paired_score_delta': mean('score_delta'), 'mean_paired_logprob_delta': mean('logprob_delta'),
@@ -343,7 +347,7 @@ def paired_comparisons(layer_rows, workspace=False):
 def summarize(run_dir, output_dir):
     plan = json.loads((run_dir / 'experiment.json').read_text())
     rows = [json.loads(line) for line in (run_dir / 'prompts.jsonl').read_text().splitlines()]
-    if plan['status'] != 'complete' or len(rows) not in (2, 10) or rows != plan['samples']:
+    if plan['status'] != 'complete' or not rows or rows != plan['samples']:
         raise ValueError('All saved samples must complete before summary; plan must match prompts')
     validate_pairing(rows)
     if digest(run_dir / 'concepts.json') != plan['resolved_concepts_sha256']:
@@ -395,6 +399,7 @@ def summarize(run_dir, output_dir):
                 selected = [m for m in metrics if m['span'] == span and m['concept_set'] == group and 12 <= m['layer'] <= 29]
                 score = statistics.mean(m['mean_control_centered_score'] for m in selected) if selected else None
                 sample[f'{group}_{span}_workspace_score'] = score
+                sample[f'{group}_{span}_workspace_layers'] = len(selected)
                 if selected:
                     workspace_rows.append({**common, 'span': span, 'concept_set': group,
                         'mean_control_centered_score': score,
@@ -409,17 +414,22 @@ def summarize(run_dir, output_dir):
     for condition in CONDITIONS:
         selected = [s for s in samples if s['assigned_condition'] == condition]
         condition_summary[condition] = {'samples': len(selected),
-            'mean_generated_tokens': statistics.mean(s['generated_tokens'] for s in selected),
+            'mean_generated_tokens': statistics.mean(s['generated_tokens'] for s in selected) if selected else None,
+            'mean_generated_tokens_n_samples': len(selected),
             'thinking_generation_completed': sum(s['thinking_generation_completed'] for s in selected),
-            'span_eligible': sum(s['thinking_span_valid'] for s in selected)}
+            'span_eligible': sum(s['thinking_span_valid'] for s in selected),
+            'workspace_eligible_samples': {
+                f'{group}_{span}': sum(s[f'{group}_{span}_workspace_score'] is not None for s in selected)
+                for span in SPANS for group in GROUPS}}
     single.write_json(output_dir / 'summary.json', {'schema_version': 1,
-        'independent_scenarios': 5, 'generations': 10, 'behavioural_outcomes_evaluated': False,
+        'independent_scenarios': len({s['scenario_id'] for s in samples}),
+        'generations': len(samples), 'behavioural_outcomes_evaluated': False,
         'limitations': LIMITATIONS, 'condition_summary': condition_summary,
         'workspace_paired_comparisons': paired_comparisons(workspace_rows, workspace=True),
         'pairing': 'within scenario, covert_persuasion minus neutral; means across positions then layers',
         'run_manifest_sha256': digest(run_dir / 'experiment.json'),
         'concepts_sha256': digest(run_dir / 'concepts.json')})
-    print(json.dumps({'status': 'summarized', 'output_dir': str(output_dir), 'samples': 10}), flush=True)
+    print(json.dumps({'status': 'summarized', 'output_dir': str(output_dir), 'samples': len(samples)}), flush=True)
 
 
 def main():
