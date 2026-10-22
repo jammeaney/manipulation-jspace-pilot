@@ -233,13 +233,13 @@ def write_review(dest, prepared, pins, source):
 
 
 def write_zip(path, files):
-    with ZipFile(path, 'x', ZIP_DEFLATED, compresslevel=9) as archive:
+    with ZipFile(path, 'x', ZIP_DEFLATED, compresslevel=1) as archive:
         for name, data in sorted(files):
             info = ZipInfo(str(name), date_time=(1980, 1, 1, 0, 0, 0))
             info.create_system = 3
             info.compress_type = ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, data, compresslevel=9)
+            archive.writestr(info, data, compresslevel=1)
     with ZipFile(path) as archive:
         if archive.testzip() is not None:
             raise ValueError(f'ZIP integrity check failed: {path}')
