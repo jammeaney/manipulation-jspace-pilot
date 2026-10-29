@@ -16,8 +16,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 if __package__:
     from .sanity_check import MODEL, MODEL_REVISION, LENS, LENS_REVISION, LENS_FILE
+    from . import model_profiles as profiles
+    from .reasoning_protocols import harmony_markers, harmony_spans, single_marker
 else:
     from sanity_check import MODEL, MODEL_REVISION, LENS, LENS_REVISION, LENS_FILE
+    import model_profiles as profiles
+    from reasoning_protocols import harmony_markers, harmony_spans, single_marker
 
 
 def write_json(path, value):
@@ -33,18 +37,24 @@ def decode(tokenizer, ids, skip_special_tokens=False):
                             clean_up_tokenization_spaces=False)
 
 
-def prepare_prompt(tokenizer, system, user):
+def prepare_prompt(tokenizer, system, user, profile=None, template_kwargs=None, return_rendered=False):
     messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-    ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
-                                       enable_thinking=True)
+    options = template_kwargs if template_kwargs is not None else (
+        {'reasoning_effort': 'medium'} if profile and profile.protocol == 'harmony' else {'enable_thinking': True})
+    if profile is not None and profile.protocol == 'harmony':
+        harmony_markers(tokenizer)  # Reject unknown/multitoken control strings before generation.
+    elif profile is not None:
+        single_marker(tokenizer, '<think>')
+        single_marker(tokenizer, '</think>')
+    ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, **options)
     if hasattr(ids, "input_ids"):
         ids = ids.input_ids
     rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True,
-                                            enable_thinking=True)
+                                            **options)
     encoded = tokenizer(rendered, add_special_tokens=False, return_offsets_mapping=True)
     if encoded["input_ids"] != ids:
         raise ValueError("Rendered prompt offsets do not match actual generation IDs")
-    header = "<|im_start|>user\n"
+    header = "<|start|>user<|message|>" if profile and profile.protocol == "harmony" else "<|im_start|>user\n"
     start = rendered.index(header) + len(header)
     if rendered[start:start + len(user)] != user:
         raise ValueError("Cannot locate the exact user content in the pinned chat template")
@@ -52,7 +62,7 @@ def prepare_prompt(tokenizer, system, user):
                       if b > start and a < start + len(user)]
     if not user_positions:
         raise ValueError("No user-content tokens found")
-    return messages, ids, user_positions
+    return (messages, ids, user_positions, rendered) if return_rendered else (messages, ids, user_positions)
 
 
 @torch.inference_mode()
@@ -272,7 +282,7 @@ def capture_concepts(logits, normalizer, groups):
 
 @torch.inference_mode()
 def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshold,
-               original_ids=None, concept_token_ids=None):
+               original_ids=None, concept_token_ids=None, workspace_layers=None):
     full = validate_transcript(data, tokenizer, original_ids)
     ids = torch.tensor([full], dtype=torch.long, device=model.input_device)
     if ids.cpu().tolist()[0] != full:
@@ -281,6 +291,7 @@ def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshol
         not 0 <= layer < model.n_layers for layer in lens.source_layers
     ):
         raise ValueError("Lens/model dimension or layer mismatch")
+    band = set(range(12, 30) if workspace_layers is None else workspace_layers)
     final = model.n_layers - 1
     with ActivationRecorder(model.layers, at=sorted(set(lens.source_layers) | {final})) as recorder:
         model.forward(ids)  # Exactly one cache-free full-sequence replay, no tokenization.
@@ -313,7 +324,7 @@ def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshol
                 for offset, (token_ids, logprobs) in enumerate(zip(indices, values)):
                     position = start + offset
                     row = {
-                        "layer": layer, "workspace_band": 12 <= layer <= 29,
+                        "layer": layer, "workspace_band": layer in band,
                         "position": position, "input_token_id": full[position],
                         "spans": position_roles(position, data["spans"]),
                         "top_tokens": [{"id": token, "token_string": tokenizer.convert_ids_to_tokens(token),
@@ -335,13 +346,13 @@ def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshol
                 for j, (a, b) in enumerate(zip(generation, replay_logprobs))]}
 
 
-def provenance(device, dtype):
+def provenance(device, dtype, profile=None, loading_mode=None):
     root = Path(__file__).resolve().parents[1]
     commit = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
                             capture_output=True, text=True)
     dirty = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
                            capture_output=True, text=True)
-    return {"model": MODEL, "model_revision": MODEL_REVISION,
+    result = {"model": MODEL, "model_revision": MODEL_REVISION,
             "tokenizer_revision": MODEL_REVISION, "lens": LENS,
             "lens_revision": LENS_REVISION, "lens_file": LENS_FILE,
             "jlens_revision": "581d398613e5602a5af361e1c34d3a92ea82ba8e",
@@ -352,6 +363,15 @@ def provenance(device, dtype):
             "git_commit": commit.stdout.strip() if commit.returncode == 0 else None,
             "git_dirty": bool(dirty.stdout) if dirty.returncode == 0 else None,
             "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    if profile is not None:
+        result.update(model=profile.model, model_revision=profile.model_revision,
+            tokenizer_revision=profile.model_revision, lens=profile.lens,
+            lens_revision=profile.lens_revision, lens_file=profile.lens_file,
+            lens_method=profile.lens_method, loading_mode=loading_mode,
+            model_profile=profile.record(), profile_code_hashes=profiles.code_hashes(),
+            installed_jlens_commit=profiles.verify_original_jlens(),
+            profile_runtime_versions=profiles.runtime_versions())
+    return result
 
 
 def sync(device):
@@ -371,7 +391,14 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--position-chunk-size", type=int, default=8)
     parser.add_argument("--logprob-flag-threshold", type=float, default=.5)
+    profiles.add_arguments(parser, experimental=True)
+    parser.add_argument('--smoke-checks', action='store_true',
+                        help='Check original lens.apply/hook agreement and walkthrough; save a paired-run validation report')
     args = parser.parse_args()
+    profile = profiles.resolve(args)
+    mode = profiles.loading_mode(profile, args)
+    if profile.protocol == 'harmony' and not args.experimental_smoke:
+        parser.error('GPT-OSS is gated; --experimental-smoke permits only a single-example experiment')
     if args.max_new_tokens < 1 or args.position_chunk_size < 1 or not 0 < args.temperature < float("inf"):
         parser.error("Token counts/chunk size and finite temperature must be positive")
     if not 0 < args.logprob_flag_threshold < float("inf"):
@@ -386,18 +413,36 @@ def main():
         parser.error("Prompt and system message must be nonempty")
     if args.output_dir.exists():
         raise FileExistsError(args.output_dir)
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION)
-    hf = AutoModelForCausalLM.from_pretrained(MODEL, revision=MODEL_REVISION,
-                                            dtype=getattr(torch, dtype), device_map=args.device)
-    lens = jlens.JacobianLens.from_pretrained(LENS, filename=LENS_FILE, revision=LENS_REVISION)
-    run_example(args, hf, tokenizer, lens)
+    if profile == profiles.QWEN4:
+        tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION)
+        hf = AutoModelForCausalLM.from_pretrained(MODEL, revision=MODEL_REVISION,
+                                                dtype=getattr(torch, dtype), device_map=args.device)
+        lens = jlens.JacobianLens.from_pretrained(LENS, filename=LENS_FILE, revision=LENS_REVISION)
+        run_example(args, hf, tokenizer, lens)
+    else:
+        profiles.verify_original_jlens()
+        tokenizer = AutoTokenizer.from_pretrained(profile.model, revision=profile.model_revision, trust_remote_code=False)
+        options = profiles.template_options(profile, args)
+        prepare_prompt(tokenizer, system, user, profile, options)  # Before loading weights.
+        hf = profiles.load_hf(profile, args.device, dtype, mode)
+        lens = jlens.JacobianLens.from_pretrained(profile.lens, filename=profile.lens_file, revision=profile.lens_revision)
+        profiles.validate_lens(profile, hf, lens)
+        run_example(args, hf, tokenizer, lens, profile=profile)
 
 
-def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=True):
+def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=True, profile=None):
     """Shared single-example pipeline; callers may reuse loaded weights across samples."""
     dtype = args.dtype or ("bfloat16" if args.device == "cuda" else "float32")
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    metadata = provenance(args.device, dtype)
+    mode = profiles.loading_mode(profile, args) if profile else 'unquantized'
+    metadata = provenance(args.device, dtype, profile, mode) if profile else provenance(args.device, dtype)
+    if profile is not None:
+        profiles.validate_lens(profile, hf, lens)
+        quantizer = getattr(hf, 'hf_quantizer', None)
+        quantization = getattr(quantizer, 'quantization_config', None)
+        metadata.update(hf_model_class=type(hf).__name__,
+                        effective_quantization_config=quantization.to_dict() if quantization else None)
+    options = profiles.template_options(profile, args) if profile else {'enable_thinking': True}
     settings = {"max_new_tokens": args.max_new_tokens, "temperature": args.temperature,
                 "seed": args.seed, "do_sample": True, "top_p": 0.95,
                 "top_k": 20, "presence_penalty": 1.5, "repetition_penalty": 1.0,
@@ -409,12 +454,29 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
                 "penalties_and_other_logits_processors": "presence penalty, top-k, top-p"}
     manifest = {"schema_version": 1, "created_at_utc": datetime.now(timezone.utc).isoformat(),
                 "status": "initializing", "provenance": metadata, "generation_settings": settings}
+    if profile:
+        settings.update(template_kwargs=options, loading_mode=mode)
+        manifest['model_profile'] = profile.record()
+        manifest['validation_policy'] = profile.paired_gate
+        manifest.update(lens_prompts_fitted=lens.n_prompts, lens_residual_width=lens.d_model)
     if concept_token_ids is not None:
         manifest["concept_token_ids"] = concept_token_ids
     manifest_path = args.output_dir / "manifest.json"
     write_json(manifest_path, manifest)
-    messages, prompt, user_positions = prepare_prompt(tokenizer, args.system.strip(), args.prompt.strip())
-    eos_ids = sorted({tokenizer.eos_token_id, hf.config.get_text_config().eos_token_id} - {None})
+    if profile:
+        messages, prompt, user_positions, rendered = prepare_prompt(
+            tokenizer, args.system.strip(), args.prompt.strip(), profile, options, return_rendered=True)
+        eos_ids = []
+        for value in (tokenizer.eos_token_id, hf.config.get_text_config().eos_token_id, hf.generation_config.eos_token_id):
+            for token in ([value] if isinstance(value, int) else value or []):
+                if token not in eos_ids:
+                    eos_ids.append(token)
+        eos_ids.sort()
+        if profile.protocol == 'harmony' and harmony_markers(tokenizer)['return'] not in eos_ids:
+            raise ValueError('Harmony final-return token must be an explicit generation stopping ID')
+    else:
+        messages, prompt, user_positions = prepare_prompt(tokenizer, args.system.strip(), args.prompt.strip())
+        eos_ids = sorted({tokenizer.eos_token_id, hf.config.get_text_config().eos_token_id} - {None})
     if not eos_ids:
         raise ValueError("No explicit stopping token IDs found")
     if len(prompt) + args.max_new_tokens > hf.config.get_text_config().max_position_embeddings:
@@ -425,6 +487,10 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
     metadata["deterministic_algorithms_enabled"] = torch.are_deterministic_algorithms_enabled()
     metadata["cuda_matmul_allow_tf32"] = torch.backends.cuda.matmul.allow_tf32
     metadata["cudnn_allow_tf32"] = torch.backends.cudnn.allow_tf32
+    smoke = None
+    if getattr(args, 'smoke_checks', False):
+        smoke = smoke_checks(hf, tokenizer, lens, profile)
+        write_json(args.output_dir / 'smoke_checks.json', smoke)
     sync(args.device)
     if args.device == "cuda":
         torch.cuda.reset_peak_memory_stats()
@@ -442,7 +508,12 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
             "decode_policy": {"skip_special_tokens": False, "clean_up_tokenization_spaces": False},
             "generated_text": decode(tokenizer, generated), "display_text": decode(tokenizer, generated, True),
             "full_text": decode(tokenizer, original_ids),
-            "spans": find_spans(prompt, generated, tokenizer, user_positions, eos_ids)}
+            "spans": (harmony_spans(prompt, generated, tokenizer, user_positions, eos_ids)
+                      if profile and profile.protocol == 'harmony' else
+                      find_spans(prompt, generated, tokenizer, user_positions, eos_ids))}
+    if profile:
+        data.update(rendered_prompt=rendered, template_kwargs=options,
+                    chat_template_sha256=hashlib.sha256(tokenizer.get_chat_template().encode()).hexdigest())
     transcript_path = args.output_dir / "transcript.json"
     write_json(transcript_path, data)
     manifest["status"] = "captured; replay pending"
@@ -456,24 +527,72 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
     model = jlens.from_hf(hf, tokenizer, force_bos=False)
     sync(args.device)
     start = time.perf_counter()
+    band = profiles.workspace_band(model.n_layers, lens.source_layers) if profile else [l for l in lens.source_layers if 12 <= l <= 29]
     validation = replay_one(model, lens, tokenizer, saved, args.output_dir / "lens_readouts.jsonl",
                             args.position_chunk_size, args.logprob_flag_threshold, original_ids,
-                            concept_token_ids=concept_token_ids)
+                            concept_token_ids=concept_token_ids, workspace_layers=band)
     sync(args.device)
     manifest["replay_seconds"] = time.perf_counter() - start
     write_json(args.output_dir / "replay_validation.json", validation)
     manifest.update(status="complete", lens_layers=lens.source_layers,
-                    workspace_band=[l for l in lens.source_layers if 12 <= l <= 29],
+                    workspace_band=band,
                     span_analysis_eligible=saved["spans"]["span_analysis_eligible"],
                     peak_gpu_allocated_bytes=torch.cuda.max_memory_allocated() if args.device == "cuda" else None,
                     peak_gpu_reserved_bytes=torch.cuda.max_memory_reserved() if args.device == "cuda" else None)
     write_json(manifest_path, manifest)
+    if smoke is not None:
+        write_validation_report(args.output_dir, profile or profiles.QWEN4, dtype, mode, smoke, manifest, saved, validation)
     print(json.dumps({"status": "complete", "output_dir": str(args.output_dir),
                       "stop_reason": stop_reason, "spans": saved["spans"],
                       "token_identity": validation["token_identity"],
                       "diagnostics": validation["diagnostics"]}), flush=True)
 
     return {"manifest": manifest, "transcript": saved, "validation": validation}
+
+
+def smoke_checks(hf, tokenizer, lens, profile=None):
+    """Original method only. Read the upstream intermediate-concept example, no fitting."""
+    if __package__:
+        from .sanity_check import BOOT_PROMPT, exact_readout, token_variants
+    else:
+        from sanity_check import BOOT_PROMPT, exact_readout, token_variants
+    model = jlens.from_hf(hf, tokenizer, force_bos=False)
+    reference, final, ids = lens.apply(model, BOOT_PROMPT, positions=[-2])
+    actual, final_actual = exact_readout(model, lens, ids.detach().clone(), lens.source_layers, -2)
+    errors = {str(layer): (reference[layer]-actual[layer]).abs().max().item() for layer in lens.source_layers}
+    for layer in lens.source_layers:
+        torch.testing.assert_close(reference[layer], actual[layer], atol=1e-3, rtol=1e-3)
+    torch.testing.assert_close(final, final_actual, atol=1e-3, rtol=1e-3)
+    ranks = {}
+    for layer, logits in actual.items():
+        vector = logits[0]
+        ranks[str(layer)] = {word: min((1+int((vector>vector[token]).sum())
+            for token in token_variants(tokenizer, word).values()), default=None)
+            for word in ('Italy', 'Rome', 'euro')}
+    intermediate = [value for rank in ranks.values() for word, value in rank.items()
+                    if word in ('Italy', 'Rome') and value is not None]
+    return dict(method='original_jacobian_lens', prompt=BOOT_PROMPT, position=-2,
+        exact_id_apply=True, max_abs_error_by_layer=errors,
+        final_max_abs_error=(final-final_actual).abs().max().item(),
+        walkthrough=bool(intermediate) and min(intermediate) <= 10,
+        intermediate_ranks=ranks, note='Top-10 intermediate recovery is a smoke criterion, not a detector result')
+
+
+def write_validation_report(directory, profile, dtype, mode, smoke, manifest, data, validation):
+    checks = dict(exact_id_apply=smoke['exact_id_apply'], walkthrough=smoke['walkthrough'],
+        token_identity=validation['token_identity'] and validation['original_generation_checked'],
+        complete_thinking_response=data['stop_reason'] == 'eos' and data['spans']['span_analysis_eligible'])
+    report = dict(schema_version=1, model_profile=profile.record(), dtype=dtype, loading_mode=mode,
+        status='complete_smoke_pass' if all(checks.values()) else 'incomplete_or_failed_smoke', checks=checks,
+        generation_settings=manifest.get('generation_settings', {}),
+        replay_diagnostics=validation['diagnostics'], code_hashes=profiles.code_hashes(),
+        runtime=profiles.runtime_versions(),
+        evidence_sha256={name: hashlib.sha256((directory/name).read_bytes()).hexdigest()
+            for name in ('manifest.json', 'transcript.json', 'replay_validation.json', 'smoke_checks.json')},
+        limitations=['Runtime compatibility does not prove the unpublished lens fitting model revision.',
+                     'Replay probability errors remain diagnostics, not a new threshold-based exclusion.',
+                     'GPT-OSS fitting precision remains unverified; a smoke pass does not enable paired runs.'])
+    write_json(directory / 'model_validation.json', report)
 
 
 if __name__ == "__main__":
