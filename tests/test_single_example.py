@@ -100,8 +100,9 @@ class PipelineTests(unittest.TestCase):
         with torch.inference_mode():
             raw = self.hf(input_ids=torch.tensor([self.prompt]),
                           use_cache=False, logits_to_keep=1).logits[0, -1].float()
-        selected = (raw.argmax().item() + 1) % raw.numel()
-        with patch.object(single.torch, 'multinomial', return_value=torch.tensor([selected])):
+        # multinomial returns an index within the sorted top-k candidates.
+        selected = raw.topk(20).indices[1].item()
+        with patch.object(single.torch, 'multinomial', return_value=torch.tensor([1])):
             ids, lps, _ = single.generate_one(self.hf, self.prompt, 1, .7, 42, [])
         self.assertEqual(ids, [selected])
         self.assertAlmostEqual(lps[0], raw.log_softmax(-1)[selected].item(), places=5)
