@@ -15,13 +15,16 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 if __package__:
-    from .sanity_check import MODEL, MODEL_REVISION, LENS, LENS_REVISION, LENS_FILE
     from . import model_profiles as profiles
     from .reasoning_protocols import harmony_markers, harmony_spans, single_marker
 else:
-    from sanity_check import MODEL, MODEL_REVISION, LENS, LENS_REVISION, LENS_FILE
     import model_profiles as profiles
     from reasoning_protocols import harmony_markers, harmony_spans, single_marker
+
+# Default (Qwen3.5-4B) pins, kept as names for the legacy 4B code path.
+MODEL, MODEL_REVISION = profiles.QWEN4.model, profiles.QWEN4.model_revision
+LENS, LENS_REVISION, LENS_FILE = profiles.QWEN4.lens, profiles.QWEN4.lens_revision, profiles.QWEN4.lens_file
+WORKSPACE_RULE = 'floor(0.38 * layers) through floor(0.92 * layers), inclusive; fitted lens layers only'
 
 
 def write_json(path, value):
@@ -291,7 +294,8 @@ def replay_one(model, lens, tokenizer, data, readouts_path, chunk_size, threshol
         not 0 <= layer < model.n_layers for layer in lens.source_layers
     ):
         raise ValueError("Lens/model dimension or layer mismatch")
-    band = set(range(12, 30) if workspace_layers is None else workspace_layers)
+    band = set(profiles.workspace_band(model.n_layers, lens.source_layers)
+               if workspace_layers is None else workspace_layers)
     final = model.n_layers - 1
     with ActivationRecorder(model.layers, at=sorted(set(lens.source_layers) | {final})) as recorder:
         model.forward(ids)  # Exactly one cache-free full-sequence replay, no tokenization.
@@ -355,6 +359,7 @@ def provenance(device, dtype, profile=None, loading_mode=None):
     result = {"model": MODEL, "model_revision": MODEL_REVISION,
             "tokenizer_revision": MODEL_REVISION, "lens": LENS,
             "lens_revision": LENS_REVISION, "lens_file": LENS_FILE,
+            "lens_ref": profiles.LENS_REFS.get(LENS_REVISION),
             "jlens_revision": "581d398613e5602a5af361e1c34d3a92ea82ba8e",
             "packages": {p: version(p) for p in ["torch", "torchvision", "transformers", "jlens", "accelerate"]},
             "python": platform.python_version(), "platform": platform.platform(),
@@ -367,7 +372,7 @@ def provenance(device, dtype, profile=None, loading_mode=None):
         result.update(model=profile.model, model_revision=profile.model_revision,
             tokenizer_revision=profile.model_revision, lens=profile.lens,
             lens_revision=profile.lens_revision, lens_file=profile.lens_file,
-            lens_method=profile.lens_method, loading_mode=loading_mode,
+            lens_ref=profiles.LENS_REFS.get(profile.lens_revision), lens_method=profile.lens_method, loading_mode=loading_mode,
             model_profile=profile.record(), profile_code_hashes=profiles.code_hashes(),
             installed_jlens_commit=profiles.verify_original_jlens(),
             profile_runtime_versions=profiles.runtime_versions())
@@ -527,7 +532,7 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
     model = jlens.from_hf(hf, tokenizer, force_bos=False)
     sync(args.device)
     start = time.perf_counter()
-    band = profiles.workspace_band(model.n_layers, lens.source_layers) if profile else [l for l in lens.source_layers if 12 <= l <= 29]
+    band = profiles.workspace_band(model.n_layers, lens.source_layers)
     validation = replay_one(model, lens, tokenizer, saved, args.output_dir / "lens_readouts.jsonl",
                             args.position_chunk_size, args.logprob_flag_threshold, original_ids,
                             concept_token_ids=concept_token_ids, workspace_layers=band)
@@ -535,7 +540,7 @@ def run_example(args, hf, tokenizer, lens, concept_token_ids=None, print_tokens=
     manifest["replay_seconds"] = time.perf_counter() - start
     write_json(args.output_dir / "replay_validation.json", validation)
     manifest.update(status="complete", lens_layers=lens.source_layers,
-                    workspace_band=band,
+                    model_layers=model.n_layers, workspace_band=band, workspace_rule=WORKSPACE_RULE,
                     span_analysis_eligible=saved["spans"]["span_analysis_eligible"],
                     peak_gpu_allocated_bytes=torch.cuda.max_memory_allocated() if args.device == "cuda" else None,
                     peak_gpu_reserved_bytes=torch.cuda.max_memory_reserved() if args.device == "cuda" else None)

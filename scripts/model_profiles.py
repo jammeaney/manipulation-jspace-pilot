@@ -5,10 +5,15 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import sys
 
 JLENS_COMMIT = '581d398613e5602a5af361e1c34d3a92ea82ba8e'
 LENS_REPO = 'neuronpedia/jacobian-lens'
-LENS_NEW = 'e166deb5ad540932100ef803c8c9bcc2a5453694'
+LENS_NEW = 'e166deb5ad540932100ef803c8c9bcc2a5453694'  # Branch `main` when pinned.
+# Branch `qwen-n1000` (resolved 2026-11-02). Its Qwen3.5-4B and Qwen3.6-27B lens files are
+# byte-identical to those at LENS_NEW (LFS sha256 1f9a8f8f... and 1718c8c5... respectively).
+LENS_QWEN_N1000 = '16a01f309fcec900fdcec3f4cd5b64f3d00e4d5a'
+LENS_REFS = {LENS_QWEN_N1000: 'qwen-n1000', LENS_NEW: 'main'}
 BASE_WORDS = Path(__file__).resolve().parents[1] / 'data/paired-feasibility/concepts.json'
 
 
@@ -30,15 +35,18 @@ class Profile:
 
 
 QWEN4 = Profile('Qwen/Qwen3.5-4B', '851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a',
-    '16a01f309fcec900fdcec3f4cd5b64f3d00e4d5a',
+    LENS_QWEN_N1000,
     'qwen3.5-4b/jlens/Salesforce-wikitext/Qwen3.5-4B_jacobian_lens_n1000.pt', 2560, 32)
-QWEN27 = Profile('Qwen/Qwen3.6-27B', '6a9e13bd6fc8f0983b9b99948120bc37f49c13e9', LENS_NEW,
+QWEN27 = Profile('Qwen/Qwen3.6-27B', '6a9e13bd6fc8f0983b9b99948120bc37f49c13e9', LENS_QWEN_N1000,
     'qwen3.6-27b/jlens/Salesforce-wikitext/Qwen3.6-27B_jacobian_lens_n1000.pt',
     5120, 64, paired_gate='complete_smoke_required')
 GPT20 = Profile('openai/gpt-oss-20b', '6cee5e81ee83917806bbde320786a8fb61efebee', LENS_NEW,
     'gpt-oss-20b/jlens/Salesforce-wikitext/gpt-oss-20b_jacobian_lens.pt',
     2880, 24, protocol='harmony', paired_gate='fit_precision_unverified')
 PROFILES = {p.model: p for p in (QWEN4, QWEN27, GPT20)}
+# Short names for --model-config; each selects model, revision and lens together.
+CONFIGS = {'qwen3.5-4b': QWEN4, 'qwen3.6-27b': QWEN27, 'gpt-oss-20b': GPT20}
+CONFIG_NAMES = {profile: name for name, profile in CONFIGS.items()}
 
 
 def fingerprint(value):
@@ -46,7 +54,9 @@ def fingerprint(value):
 
 
 def add_arguments(parser, experimental=False):
-    parser.add_argument('--model', choices=PROFILES, default=QWEN4.model)
+    parser.add_argument('--model-config', choices=CONFIGS,
+                        help='Model, revision and lens profile (default qwen3.5-4b)')
+    parser.add_argument('--model', choices=PROFILES, help='Legacy alias for --model-config (HF model ID)')
     parser.add_argument('--model-revision', help='Must match the reviewed profile commit')
     parser.add_argument('--lens', help='Must match the original-J-lens repository in the profile')
     parser.add_argument('--lens-revision', help='Must match the reviewed lens commit')
@@ -60,10 +70,14 @@ def add_arguments(parser, experimental=False):
 
 
 def resolve(args):
-    name = getattr(args, 'model', QWEN4.model)
-    if name not in PROFILES:
+    config, name = getattr(args, 'model_config', None), getattr(args, 'model', None)
+    if config is not None and config not in CONFIGS:
+        raise ValueError(f'No reviewed model config {config!r}')
+    if name is not None and name not in PROFILES:
         raise ValueError(f'No reviewed model/lens profile for {name!r}')
-    profile = PROFILES[name]
+    if config is not None and name is not None and CONFIGS[config].model != name:
+        raise ValueError('--model and --model-config select different profiles')
+    profile = CONFIGS[config] if config is not None else PROFILES[name or QWEN4.model]
     for field in ('model_revision', 'lens', 'lens_revision'):
         override = getattr(args, field, None)
         if override is not None and override != getattr(profile, field):
@@ -128,24 +142,42 @@ def wordset(groups):
     return {group: sorted(words) for group, words in groups.items()}
 
 
-def freeze_concepts(profile, source, tokenizer):
-    groups, missing = {}, []
+def single_token_ids(tokenizer, word):
+    """IDs of whichever of `word` and ' ' + `word` is one token (both if both; scored by max)."""
+    ids = []
+    for spelling in (word, ' ' + word):
+        encoded = tokenizer.encode(spelling, add_special_tokens=False)
+        if len(encoded) == 1 and encoded[0] != getattr(tokenizer, 'unk_token_id', None) and encoded[0] not in ids:
+            ids.append(encoded[0])
+    return ids
+
+
+def resolve_concepts(source, tokenizer):
+    """Resolve frozen words with this tokenizer; drop (never replace) words with no single token."""
+    groups, dropped = {}, {}
     for group, words in source['groups'].items():
-        groups[group] = {}
+        groups[group], dropped[group] = {}, []
         for word in words:
-            ids = []
-            for spelling in (word, ' ' + word):
-                encoded = tokenizer.encode(spelling, add_special_tokens=False)
-                if len(encoded) == 1 and encoded[0] != getattr(tokenizer, 'unk_token_id', None) and encoded[0] not in ids:
-                    ids.append(encoded[0])
-            if not ids:
-                missing.append(f'{group}:{word}')
-            groups[group][word] = ids
-    if missing:
-        raise ValueError('Frozen words lack single-token forms; no replacement/drop was made: ' + ', '.join(missing))
-    return dict(schema_version=1, tokenizer=profile.model, tokenizer_revision=profile.model_revision,
-        status='model-specific frozen draft words; not development-validated',
-        tokenization_rule=source['tokenization_rule'], groups=groups,
+            ids = single_token_ids(tokenizer, word)
+            if ids:
+                groups[group][word] = ids
+            else:
+                dropped[group].append(word)
+        if not groups[group]:
+            raise ValueError(f'Every word in concept group {group!r} lacks a single-token form')
+    for group, words in dropped.items():
+        for word in words:
+            print(json.dumps({'dropped_concept_word': word, 'group': group,
+                              'reason': 'neither word nor leading-space word is a single token'}),
+                  file=sys.stderr, flush=True)
+    return groups, {group: words for group, words in dropped.items() if words}
+
+
+def freeze_concepts(profile, source, tokenizer):
+    groups, dropped = resolve_concepts(source, tokenizer)
+    return dict(schema_version=2, tokenizer=profile.model, tokenizer_revision=profile.model_revision,
+        status='model-specific draft words resolved with this tokenizer; not development-validated',
+        tokenization_rule=source['tokenization_rule'], groups=groups, dropped_words=dropped,
         wordset_sha256=fingerprint(wordset(source['groups'])),
         source_concepts_fingerprint=fingerprint(source), model_profile=profile.record())
 
@@ -223,7 +255,7 @@ def verify_original_jlens():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Freeze model-specific concept IDs before paired GPU outcomes; tokenizer only')
+    parser = argparse.ArgumentParser(description='Inspect model-specific concept IDs (paired runs resolve these at run time); tokenizer only')
     add_arguments(parser)
     parser.add_argument('--source', type=Path, default=BASE_WORDS)
     parser.add_argument('--output', type=Path, required=True)

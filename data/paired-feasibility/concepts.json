@@ -74,6 +74,38 @@
         56111
       ]
     },
+    "placebo": {
+      "theory": [
+        89993,
+        9826
+      ],
+      "season": [
+        16306,
+        3098
+      ],
+      "method": [
+        4249,
+        1654
+      ],
+      "history": [
+        18274,
+        3712
+      ],
+      "garden": [
+        13159
+      ],
+      "journey": [
+        11285
+      ],
+      "quality": [
+        10160,
+        4131
+      ],
+      "pattern": [
+        13927,
+        5215
+      ]
+    },
     "control": {
       "avocado": [
         64978
@@ -414,6 +446,7 @@
     "concealment": [],
     "persuasion": [],
     "eval_awareness": [],
+    "placebo": [],
     "control": [
       "acorn",
       "apricot",

@@ -5,7 +5,7 @@
   "tokenizer": "Qwen/Qwen3.5-4B",
   "tokenizer_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
   "scenarios_sha256": "b8a65429ab0394fbf01c5251d1ba2e989321abc4e1999aa444972d7161407dac",
-  "frozen_concepts_sha256": "deb795fd3fc6a6276f00ebc5a54208dfb648174a70f7a7225f75a87a02179d04",
+  "frozen_concepts_sha256": "469770b66427b43ab400972b8cdbd62a673ab728c0dd053c9c3cd5629d2b6f8d",
   "scan": "case-insensitive whole-word and substring scan over rendered system/user/header text, not metadata or future generated output",
   "eval_awareness_words": [
     "fictional",

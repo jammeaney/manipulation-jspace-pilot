@@ -9,8 +9,10 @@ import math
 from pathlib import Path
 import re
 import statistics
+import shutil
 from string import Formatter
 from types import SimpleNamespace
+import time
 
 import jlens
 import torch
@@ -26,7 +28,9 @@ else:
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / 'data/paired-feasibility'
 CONDITIONS = ('neutral', 'covert_persuasion')
-GROUPS = ('concealment', 'persuasion', 'eval_awareness')
+# Scored groups in report order; 'control' is the subtracted baseline. Runs made before the
+# placebo group existed are summarized with the groups recorded in their own concepts.json.
+GROUPS = ('concealment', 'persuasion', 'eval_awareness', 'placebo')
 SPANS = ('response_start', 'cot', 'answer', 'user_prompt')
 LIMITATIONS = [
     'Exploratory five-scenario feasibility contrast, not the 90-sample pilot or a detector.',
@@ -179,41 +183,78 @@ def validate_pairing(rows):
             raise ValueError('Common system context differs')
 
 
+def concept_groups(groups):
+    """Scored groups present in a concept file, in report order."""
+    return tuple(group for group in GROUPS if group in groups)
+
+
 def load_concepts(path, tokenizer=None, profile=None):
+    """Validate a word list with token IDs (the frozen source file or a run's resolved file)."""
     config = json.loads(path.read_text())
     groups = config['groups']
-    expected_revision = profile.model_revision if profile else single.MODEL_REVISION
-    if config['tokenizer_revision'] != expected_revision or set(groups) != set(GROUPS) | {'control'}:
-        raise ValueError('Concept config must match this model tokenizer revision and documented groups; freeze a separate concept file')
-    if profile and profile != profiles.QWEN4:
-        baseline = json.loads((DATA / 'concepts.json').read_text())
-        words_hash = profiles.fingerprint(profiles.wordset(baseline['groups']))
-        if (config.get('tokenizer') != profile.model or config.get('model_profile') != profile.record()
-                or config.get('wordset_sha256') != words_hash
-                or profiles.wordset(groups) != profiles.wordset(baseline['groups'])):
-            raise ValueError('Model-specific concept artifact has different profile or frozen words')
-    if len(groups['control']) != 100 or any(not words for words in groups.values()):
-        raise ValueError('Exactly 100 controls and nonempty concept sets are required')
+    profile = profile or profiles.QWEN4
+    if config['tokenizer_revision'] != profile.model_revision or config.get('tokenizer', profile.model) != profile.model:
+        raise ValueError('Concept config must match this model tokenizer and revision; resolve a separate concept file')
+    if ('control' not in groups or not concept_groups(groups)
+            or set(groups) - set(GROUPS) - {'control'} or any(not words for words in groups.values())):
+        raise ValueError('Nonempty control and documented concept groups are required')
     for words in groups.values():
         for word, ids in words.items():
             if not ids or any(type(i) is not int or i < 0 for i in ids) or len(ids) != len(set(ids)):
                 raise ValueError('Invalid frozen concept token IDs')
-            if tokenizer is not None:
-                actual = []
-                for spelling in (word, ' ' + word):
-                    encoded = tokenizer.encode(spelling, add_special_tokens=False)
-                    if len(encoded) == 1 and encoded[0] not in actual:
-                        actual.append(encoded[0])
-                if actual != ids:
-                    raise ValueError(f'Frozen token IDs do not match tokenizer for {word!r}')
+            if tokenizer is not None and profiles.single_token_ids(tokenizer, word) != ids:
+                raise ValueError(f'Frozen token IDs do not match tokenizer for {word!r}')
     return config
 
 
-def prepare(args):
+def resolve_run_concepts(source_path, tokenizer, profile, saved_groups=None):
+    """Resolve the frozen word list with this model's tokenizer at run time.
+
+    IDs stored in the source file are a reference for the tokenizer they were frozen with:
+    if that is this model's tokenizer, any disagreement is an error. `saved_groups` (from an
+    earlier run being replayed) must also agree for every word they share.
+    """
+    source = json.loads(source_path.read_text())
+    if set(source['groups']) - set(GROUPS) - {'control'} or 'control' not in source['groups']:
+        raise ValueError('Word list has undocumented groups or no control group')
+    groups, dropped = profiles.resolve_concepts(source, tokenizer)
+    references = []
+    if source.get('tokenizer_revision') == profile.model_revision:
+        references.append(('word-list file', source['groups']))
+    if saved_groups is not None:
+        references.append(('saved run', saved_groups))
+    for label, reference in references:
+        for group, words in reference.items():
+            for word, ids in words.items():
+                if isinstance(ids, list) and word in groups.get(group, {}) and groups[group][word] != ids:
+                    raise ValueError(f'{group}:{word} resolves to {groups[group][word]}, but the {label} has {ids}')
+    return dict(schema_version=2, tokenizer=profile.model, tokenizer_revision=profile.model_revision,
+        model_config=profiles.CONFIG_NAMES[profile],
+        status='frozen draft words resolved with this model tokenizer at run time; not development-validated',
+        tokenization_rule=source['tokenization_rule'], groups=groups, dropped_words=dropped,
+        source_concepts_sha256=digest(source_path),
+        wordset_sha256=profiles.fingerprint(profiles.wordset(source['groups'])))
+
+
+def load_tokenizer(profile):
+    if profile == profiles.QWEN4:
+        return AutoTokenizer.from_pretrained(profile.model, revision=profile.model_revision)
+    return AutoTokenizer.from_pretrained(profile.model, revision=profile.model_revision, trust_remote_code=False)
+
+
+def expected_band(profile):
+    """Band for the profile's fitted layers (0..L-2); re-checked against the loaded lens."""
+    return profiles.workspace_band(profile.layers, range(profile.layers - 1))
+
+
+def prepare(args, tokenizer=None):
     config = json.loads(args.scenarios.read_text())
     rows = build_samples(config)
     profile = profiles.resolve(args)
-    concepts = load_concepts(args.concepts, profile=profile if profile != profiles.QWEN4 else None)
+    if args.output_dir.exists():
+        raise FileExistsError(args.output_dir)
+    tokenizer = tokenizer or load_tokenizer(profile)
+    concepts = resolve_run_concepts(args.concepts, tokenizer, profile)
     args.output_dir.mkdir(parents=True, exist_ok=False)
     single.write_json(args.output_dir / 'concepts.json', concepts)
     with (args.output_dir / 'prompts.jsonl').open('x') as out:
@@ -233,6 +274,11 @@ def prepare(args):
             'scenario_source_sha256': digest(args.scenarios), 'concept_source_sha256': digest(args.concepts),
             'resolved_concepts_sha256': digest(args.output_dir / 'concepts.json'),
             'runner_sha256': digest(Path(__file__)), 'limitations': LIMITATIONS,
+            'model_config': profiles.CONFIG_NAMES[profile],
+            'lens_ref': profiles.LENS_REFS.get(profile.lens_revision),
+            'workspace_band': expected_band(profile), 'workspace_rule': single.WORKSPACE_RULE,
+            'concept_groups': list(concept_groups(concepts['groups'])),
+            'dropped_concept_words': concepts['dropped_words'],
             'behavioural_outcomes_evaluated': False, 'completed_samples': []}
     if profile != profiles.QWEN4:
         report = getattr(args, 'validation_report', None)
@@ -256,24 +302,16 @@ def run(args):
     dtype = args.dtype or ('bfloat16' if args.device == 'cuda' else 'float32')
     if args.device == 'cuda' and dtype == 'bfloat16' and not torch.cuda.is_bf16_supported():
         raise ValueError('CUDA GPU must support bf16 or explicitly select float32')
-    plan = prepare(args)
-    if profile == profiles.QWEN4:
-        tokenizer = AutoTokenizer.from_pretrained(single.MODEL, revision=single.MODEL_REVISION)
-        concepts = load_concepts(args.output_dir / 'concepts.json', tokenizer)['groups']
-        hf = AutoModelForCausalLM.from_pretrained(single.MODEL, revision=single.MODEL_REVISION,
-                                                dtype=getattr(torch, dtype), device_map=args.device)
-        lens = jlens.JacobianLens.from_pretrained(single.LENS, filename=single.LENS_FILE,
-                                                 revision=single.LENS_REVISION)
-    else:
+    if profile != profiles.QWEN4:
         profiles.verify_original_jlens()
-        tokenizer = AutoTokenizer.from_pretrained(profile.model, revision=profile.model_revision, trust_remote_code=False)
-        concepts = load_concepts(args.output_dir / 'concepts.json', tokenizer, profile)['groups']
+    tokenizer = load_tokenizer(profile)
+    plan = prepare(args, tokenizer)
+    concepts = load_concepts(args.output_dir / 'concepts.json', tokenizer, profile)['groups']
+    if profile != profiles.QWEN4:
         options = profiles.template_options(profile, args)
         for row in plan['samples']:
             single.prepare_prompt(tokenizer, row['system_prompt'], row['user_prompt'], profile, options)
-        hf = profiles.load_hf(profile, args.device, dtype, mode)
-        lens = jlens.JacobianLens.from_pretrained(profile.lens, filename=profile.lens_file, revision=profile.lens_revision)
-        profiles.validate_lens(profile, hf, lens)
+    hf, lens = load_model_and_lens(profile, args.device, dtype, mode)
     (args.output_dir / 'samples').mkdir()
     plan['status'] = 'running'
     single.write_json(args.output_dir / 'experiment.json', plan)
@@ -295,6 +333,19 @@ def run(args):
     summarize(args.output_dir, args.output_dir / 'summaries')
 
 
+def load_model_and_lens(profile, device, dtype, mode):
+    if profile == profiles.QWEN4:  # Unchanged legacy 4B loader.
+        hf = AutoModelForCausalLM.from_pretrained(profile.model, revision=profile.model_revision,
+                                                dtype=getattr(torch, dtype), device_map=device)
+    else:
+        hf = profiles.load_hf(profile, device, dtype, mode)
+    lens = jlens.JacobianLens.from_pretrained(profile.lens, filename=profile.lens_file,
+                                             revision=profile.lens_revision)
+    if profile != profiles.QWEN4:
+        profiles.validate_lens(profile, hf, lens)
+    return hf, lens
+
+
 def write_csv(path, rows):
     if not rows:
         raise ValueError('No summary rows produced')
@@ -304,7 +355,7 @@ def write_csv(path, rows):
         writer.writerows(rows)
 
 
-def layer_statistics(path, data, manifest):
+def layer_statistics(path, data, manifest, groups=GROUPS):
     totals, seen = {}, set()
     with path.open() as stream:
         for line in stream:
@@ -319,7 +370,7 @@ def layer_statistics(path, data, manifest):
                 raise ValueError('Readout position or span mismatch')
             concepts = row['concept_readouts']
             control = concepts['control_mean_logprob']
-            if not math.isfinite(control) or control > 0 or set(concepts['groups']) != set(GROUPS):
+            if not math.isfinite(control) or control > 0 or set(concepts['groups']) != set(groups):
                 raise ValueError('Invalid full-vocabulary concept probabilities')
             for span in row['spans']:
                 if span in ('cot', 'answer') and not data['spans']['span_analysis_eligible']:
@@ -344,7 +395,11 @@ def layer_statistics(path, data, manifest):
             for (layer, span, group), (n, raw, score, sq) in sorted(totals.items())]
 
 
-def paired_comparisons(layer_rows, workspace=False):
+def paired_comparisons(layer_rows, workspace=False, groups=None):
+    """Covert minus neutral within scenario. Every row reports the raw concept log-probability,
+    the control-word log-probability and the control-adjusted score, so score delta equals
+    raw delta minus control delta."""
+    groups = groups or concept_groups({r['concept_set'] for r in layer_rows})
     grouped = defaultdict(dict)
     for row in layer_rows:
         key = (row['scenario_id'], row['span'], row['concept_set'])
@@ -361,10 +416,12 @@ def paired_comparisons(layer_rows, workspace=False):
             'neutral_score': neutral['mean_control_centered_score'],
             'covert_score': covert['mean_control_centered_score'],
             'neutral_logprob': neutral['mean_logprob'], 'covert_logprob': covert['mean_logprob'],
+            'neutral_control': neutral['mean_control_logprob'], 'covert_control': covert['mean_control_logprob'],
             'score_delta': covert['mean_control_centered_score'] - neutral['mean_control_centered_score'],
-            'logprob_delta': covert['mean_logprob'] - neutral['mean_logprob']})
+            'logprob_delta': covert['mean_logprob'] - neutral['mean_logprob'],
+            'control_delta': covert['mean_control_logprob'] - neutral['mean_control_logprob']})
     result = []
-    keys = [(span, group) for span in SPANS for group in GROUPS]
+    keys = [(span, group) for span in SPANS for group in groups]
     if not workspace:
         keys = [key + (layer,) for key in keys for layer in sorted({r['layer'] for r in layer_rows})]
     for key in keys:
@@ -375,7 +432,10 @@ def paired_comparisons(layer_rows, workspace=False):
                'n_samples': 2 * len(pairs), 'n_neutral': len(pairs), 'n_covert': len(pairs),
                'neutral_mean_score': mean('neutral_score'), 'covert_mean_score': mean('covert_score'),
                'neutral_mean_logprob': mean('neutral_logprob'), 'covert_mean_logprob': mean('covert_logprob'),
+               'neutral_mean_control_logprob': mean('neutral_control'),
+               'covert_mean_control_logprob': mean('covert_control'),
                'mean_paired_score_delta': mean('score_delta'), 'mean_paired_logprob_delta': mean('logprob_delta'),
+               'mean_paired_control_logprob_delta': mean('control_delta'),
                'included_scenarios': ';'.join(p['scenario_id'] for p in pairs)}
         if not workspace:
             row['layer'] = key[2]
@@ -396,8 +456,9 @@ def summarize(run_dir, output_dir):
         profile = profiles.PROFILES.get(plan['model_profile']['model'])
         if profile is None or profile.record() != plan['model_profile']:
             raise ValueError('Unknown or modified model profile in experiment manifest')
-    frozen = load_concepts(run_dir / 'concepts.json', profile=profile if profile != profiles.QWEN4 else None)['groups']
-    samples, layer_rows, workspace_rows = [], [], []
+    frozen = load_concepts(run_dir / 'concepts.json', profile=profile)['groups']
+    groups = concept_groups(frozen)
+    samples, layer_rows, workspace_rows, bands = [], [], [], set()
     for row in rows:
         base = run_dir / 'samples' / row['id']
         manifest = json.loads((base / 'manifest.json').read_text())
@@ -422,14 +483,17 @@ def summarize(run_dir, output_dir):
                     or source.get('lens') != profile.lens or source.get('lens_file') != profile.lens_file
                     or source.get('loading_mode') != plan['loading_mode']
                     or source.get('dtype') != plan['generation_settings']['dtype']
-                    or manifest.get('workspace_band') != profiles.workspace_band(profile.layers, manifest['lens_layers'])
                     or manifest['lens_layers'] != list(range(profile.layers-1))):
                 raise ValueError('Sample model/lens/loading mode/workspace differs from its profile')
+        band = profiles.workspace_band(manifest.get('model_layers', profile.layers), manifest['lens_layers'])
+        if manifest.get('workspace_band', band) != band:
+            raise ValueError('Sample workspace band differs from the 38-92% depth rule for its model')
+        bands.add(tuple(band))
         expected = plan['generation_settings']
         if any(manifest['generation_settings'][k] != expected[k]
                for k in ['temperature', 'seed', 'max_new_tokens', 'position_chunk_size', 'logprob_flag_threshold']):
             raise ValueError('Generation settings differ between samples and plan')
-        metrics = layer_statistics(base / 'lens_readouts.jsonl', data, manifest)
+        metrics = layer_statistics(base / 'lens_readouts.jsonl', data, manifest, groups)
         common = {'id': row['id'], 'scenario_id': row['scenario_id'], 'assigned_condition': row['assigned_condition']}
         layer_rows.extend({**common, **metric} for metric in metrics)
         sample = {**common, 'target_option': row['side'], 'behavioural_outcome_status': 'not_evaluated',
@@ -447,22 +511,27 @@ def summarize(run_dir, output_dir):
                   'replay_flagged_tokens': len(validation['diagnostics']['large_error_generated_indices']),
                   'replay_persistent_jump_flags': len(validation['diagnostics'].get('possible_step_change_generated_indices', [])),
                   'generation_seconds': manifest['generation_seconds'], 'replay_seconds': manifest['replay_seconds']}
-        band = manifest.get('workspace_band', list(range(12, 30)))
         for span in SPANS:
-            for group in GROUPS:
+            control = None
+            for group in groups:
                 selected = [m for m in metrics if m['span'] == span and m['concept_set'] == group and m['layer'] in band]
                 score = statistics.mean(m['mean_control_centered_score'] for m in selected) if selected else None
+                raw = statistics.mean(m['mean_logprob'] for m in selected) if selected else None
+                if selected:
+                    control = statistics.mean(m['mean_control_logprob'] for m in selected)
                 sample[f'{group}_{span}_workspace_score'] = score
+                sample[f'{group}_{span}_workspace_logprob'] = raw
                 sample[f'{group}_{span}_workspace_layers'] = len(selected)
                 if selected:
                     workspace_rows.append({**common, 'span': span, 'concept_set': group,
-                        'mean_control_centered_score': score,
-                        'mean_logprob': statistics.mean(m['mean_logprob'] for m in selected)})
+                        'mean_control_centered_score': score, 'mean_logprob': raw,
+                        'mean_control_logprob': control})
+            sample[f'control_{span}_workspace_logprob'] = control
         samples.append(sample)
     output_dir.mkdir(parents=True, exist_ok=False)
     write_csv(output_dir / 'samples.csv', samples)
     write_csv(output_dir / 'layers.csv', layer_rows)
-    contrasts = paired_comparisons(layer_rows)
+    contrasts = paired_comparisons(layer_rows, groups=groups)
     write_csv(output_dir / 'layer_comparisons.csv', contrasts)
     condition_summary = {}
     for condition in CONDITIONS:
@@ -474,17 +543,132 @@ def summarize(run_dir, output_dir):
             'span_eligible': sum(s['thinking_span_valid'] for s in selected),
             'workspace_eligible_samples': {
                 f'{group}_{span}': sum(s[f'{group}_{span}_workspace_score'] is not None for s in selected)
-                for span in SPANS for group in GROUPS}}
+                for span in SPANS for group in groups}}
     single.write_json(output_dir / 'summary.json', {'schema_version': 1,
         **({'model_profile': profile.record(), 'loading_mode': plan['loading_mode']} if profile != profiles.QWEN4 else {}),
         'independent_scenarios': len({s['scenario_id'] for s in samples}),
         'generations': len(samples), 'behavioural_outcomes_evaluated': False,
         'limitations': LIMITATIONS, 'condition_summary': condition_summary,
-        'workspace_paired_comparisons': paired_comparisons(workspace_rows, workspace=True),
+        'concept_groups': list(groups), 'dropped_concept_words': plan.get('dropped_concept_words', {}),
+        'workspace_band': list(bands.pop()) if len(bands) == 1 else sorted(map(list, bands)),
+        'replay_only': plan.get('replay_only'),
+        'workspace_paired_comparisons': paired_comparisons(workspace_rows, workspace=True, groups=groups),
         'pairing': 'within scenario, covert_persuasion minus neutral; means across positions then layers',
         'run_manifest_sha256': digest(run_dir / 'experiment.json'),
         'concepts_sha256': digest(run_dir / 'concepts.json')})
     print(json.dumps({'status': 'summarized', 'output_dir': str(output_dir), 'samples': len(samples)}), flush=True)
+
+
+def replay(args):
+    """Re-score a finished run's saved token IDs with the current word lists; no generation."""
+    source_dir = args.source_run
+    plan = json.loads((source_dir / 'experiment.json').read_text())
+    rows = [json.loads(line) for line in (source_dir / 'prompts.jsonl').read_text().splitlines()]
+    if plan['status'] != 'complete' or rows != plan['samples'] or plan.get('replay_only'):
+        raise ValueError('Source must be a complete generated run whose prompts match its plan')
+    validate_pairing(rows)
+    source_profile = profiles.QWEN4
+    if 'model_profile' in plan:
+        source_profile = profiles.PROFILES.get(plan['model_profile']['model'])
+        if source_profile is None or source_profile.record() != plan['model_profile']:
+            raise ValueError('Unknown or modified model profile in source run')
+    chosen = profiles.resolve(args) if (args.model_config or args.model) else source_profile
+    if chosen != source_profile:
+        raise ValueError(f'Source run used {source_profile.model}; replay must use the same model profile')
+    profile = source_profile
+    settings = plan['generation_settings']
+    device, dtype = settings['device'], settings['dtype']
+    if (args.device or device) != device or (args.dtype or dtype) != dtype:
+        raise ValueError('Replay must use the source run device type and dtype')
+    mode = plan.get('loading_mode', 'unquantized')
+    if device == 'cuda' and not torch.cuda.is_available():
+        raise ValueError('No CUDA GPU available; nothing was written')
+    if args.output_dir.exists():
+        raise FileExistsError(args.output_dir)
+    if profile != profiles.QWEN4:
+        profiles.verify_original_jlens()
+    tokenizer = load_tokenizer(profile)
+    saved = load_concepts(source_dir / 'concepts.json', profile=profile)['groups']
+    concepts = resolve_run_concepts(args.concepts, tokenizer, profile, saved_groups=saved)
+    sources = {}
+    for row in rows:  # Check every saved sample before writing or loading weights.
+        base = source_dir / 'samples' / row['id']
+        manifest = json.loads((base / 'manifest.json').read_text())
+        data = json.loads((base / 'transcript.json').read_text())
+        validation = json.loads((base / 'replay_validation.json').read_text())
+        if (manifest['status'] != 'complete' or validation['replayed_ids_sha256'] != data['ids_sha256']
+                or not validation['token_identity'] or not validation['original_generation_checked']
+                or manifest['provenance']['model_revision'] != profile.model_revision
+                or manifest['provenance']['lens_revision'] != profile.lens_revision
+                or data['messages'] != [{'role': 'system', 'content': row['system_prompt']},
+                                        {'role': 'user', 'content': row['user_prompt']}]):
+            raise ValueError(f'Source sample {row["id"]} is incomplete or differs from its plan/profile')
+        single.validate_transcript(data, tokenizer)
+        sources[row['id']] = (base, manifest, data, validation)
+    args.output_dir.mkdir(parents=True)
+    single.write_json(args.output_dir / 'concepts.json', concepts)
+    shutil.copyfile(source_dir / 'prompts.jsonl', args.output_dir / 'prompts.jsonl')
+    plan.update(status='replaying', created_at_utc=datetime.now(timezone.utc).isoformat(),
+        concept_source_sha256=digest(args.concepts),
+        resolved_concepts_sha256=digest(args.output_dir / 'concepts.json'),
+        runner_sha256=digest(Path(__file__)), model_config=profiles.CONFIG_NAMES[profile],
+        lens_ref=profiles.LENS_REFS.get(profile.lens_revision),
+        workspace_band=expected_band(profile), workspace_rule=single.WORKSPACE_RULE,
+        concept_groups=list(concept_groups(concepts['groups'])),
+        dropped_concept_words=concepts['dropped_words'], completed_samples=[],
+        replay_only={'source_run': str(source_dir.resolve()),
+                     'source_experiment_sha256': digest(source_dir / 'experiment.json'),
+                     'source_concepts_sha256': digest(source_dir / 'concepts.json'),
+                     'regenerated': False,
+                     'note': 'Saved token IDs replayed through the model and lens; no sampling.'})
+    single.write_json(args.output_dir / 'experiment.json', plan)
+    hf, lens = load_model_and_lens(profile, device, dtype, mode)
+    model = jlens.from_hf(hf, tokenizer, force_bos=False)
+    band = profiles.workspace_band(model.n_layers, lens.source_layers)
+    plan['workspace_band'] = band  # Same as the profile band for the reviewed checkpoints.
+    (args.output_dir / 'samples').mkdir()
+    for row in rows:
+        base, manifest, data, old = sources[row['id']]
+        target = args.output_dir / 'samples' / row['id']
+        target.mkdir()
+        shutil.copyfile(base / 'transcript.json', target / 'transcript.json')
+        saved_copy = json.loads((target / 'transcript.json').read_text())
+        single.sync(device)
+        if device == 'cuda':
+            torch.cuda.reset_peak_memory_stats()
+        start = time.perf_counter()
+        # Original IDs come from the source run, whose replay already matched its generation.
+        validation = single.replay_one(model, lens, tokenizer, saved_copy, target / 'lens_readouts.jsonl',
+            settings['position_chunk_size'], settings['logprob_flag_threshold'], data['full_ids'],
+            concept_token_ids=concepts['groups'], workspace_layers=band)
+        single.sync(device)
+        seconds = time.perf_counter() - start
+        previous = [t['replay_logprob'] for t in old['per_generated_token']]
+        current = [t['replay_logprob'] for t in validation['per_generated_token']]
+        validation['replay_only'] = {
+            'source_replayed_ids_sha256': old['replayed_ids_sha256'],
+            'max_abs_difference_from_source_replay_nats': max(abs(a - b) for a, b in zip(previous, current)),
+            'source_diagnostics': old['diagnostics']}
+        single.write_json(target / 'replay_validation.json', validation)
+        manifest.update(concept_token_ids=concepts['groups'], lens_layers=lens.source_layers,
+            model_layers=model.n_layers, workspace_band=band, workspace_rule=single.WORKSPACE_RULE,
+            replay_seconds=seconds, created_at_utc=datetime.now(timezone.utc).isoformat(),
+            replay_only={'source_manifest_sha256': digest(base / 'manifest.json'),
+                         'source_replay_seconds': manifest.get('replay_seconds'),
+                         'code_sha256': {name: digest(Path(__file__).parent / name) for name in
+                                         ('paired_feasibility.py', 'single_example.py', 'model_profiles.py')}},
+            peak_gpu_allocated_bytes=torch.cuda.max_memory_allocated() if device == 'cuda' else None,
+            peak_gpu_reserved_bytes=torch.cuda.max_memory_reserved() if device == 'cuda' else None)
+        single.write_json(target / 'manifest.json', manifest)
+        plan['completed_samples'].append(row['id'])
+        single.write_json(args.output_dir / 'experiment.json', plan)
+        print(json.dumps({'replayed': len(plan['completed_samples']), 'total': len(rows), 'id': row['id'],
+            'seconds': round(seconds, 1), 'token_identity': validation['token_identity'],
+            'max_abs_difference_from_source_replay_nats':
+                validation['replay_only']['max_abs_difference_from_source_replay_nats']}), flush=True)
+    plan['status'] = 'complete'
+    single.write_json(args.output_dir / 'experiment.json', plan)
+    summarize(args.output_dir, args.output_dir / 'summaries')
 
 
 def main():
@@ -503,12 +687,21 @@ def main():
         cmd.add_argument('--position-chunk-size', type=int, default=8)
         profiles.add_arguments(cmd)
         cmd.add_argument('--validation-report', type=Path, help='Complete profile-bound single-example smoke report; new models only')
+    again = sub.add_parser('replay', help='Re-score a finished run with the current word lists; no generation')
+    again.add_argument('--source-run', type=Path, required=True)
+    again.add_argument('--output-dir', type=Path, required=True)
+    again.add_argument('--concepts', type=Path, default=DATA / 'concepts.json')
+    again.add_argument('--device', choices=['cuda', 'cpu'], help='Default and only choice: the source run device')
+    again.add_argument('--dtype', choices=['bfloat16', 'float32'], help='Default and only choice: the source run dtype')
+    profiles.add_arguments(again)
     summary = sub.add_parser('summarize')
     summary.add_argument('--run-dir', type=Path, required=True)
     summary.add_argument('--output-dir', type=Path, required=True)
     args = parser.parse_args()
     if args.command == 'summarize':
         summarize(args.run_dir, args.output_dir)
+    elif args.command == 'replay':
+        replay(args)
     else:
         if not 0 < args.temperature < float('inf'):
             parser.error('Temperature must be finite and positive')

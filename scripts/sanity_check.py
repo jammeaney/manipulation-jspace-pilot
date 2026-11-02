@@ -1,8 +1,11 @@
 """Check the pinned artifacts; optionally run one pretrained-model lens forward.
 
-Default mode downloads the tokenizer, config and lens, but no model weights.
-Use --check walkthrough|multihop|exact-id|all for Section 3 validation.
-The legacy --run-forward smoke test is preserved. No generation or replay.
+Default mode downloads the tokenizer, config and lens, but no model weights, and
+reports layer count, lens width/source layers, workspace band, thinking-delimiter
+IDs and stop-token IDs from the selected model's own config and tokenizer.
+Use --model-config to select the model/lens and --check walkthrough|multihop|exact-id|all
+for Section 3 validation. The legacy --run-forward smoke test is preserved.
+No generation or replay.
 """
 
 import argparse
@@ -14,13 +17,14 @@ from pathlib import Path
 import jlens
 import torch
 from jlens.hooks import ActivationRecorder
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
-MODEL = "Qwen/Qwen3.5-4B"
-MODEL_REVISION = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
-LENS = "neuronpedia/jacobian-lens"
-LENS_REVISION = "16a01f309fcec900fdcec3f4cd5b64f3d00e4d5a"
-LENS_FILE = "qwen3.5-4b/jlens/Salesforce-wikitext/Qwen3.5-4B_jacobian_lens_n1000.pt"
+if __package__:
+    from . import model_profiles as profiles
+else:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import model_profiles as profiles
 
 
 BOOT_PROMPT = "Fact: The currency used in the country shaped like a boot is"
@@ -91,10 +95,17 @@ def run_step0(check, model, lens, tokenizer, args):
         reports = {str(l): describe_logits(v, tokenizer, ["Italy", "Rome", "euro"], args.top_k)
                    for l, v in outputs.items()}
         _, completion = exact_readout(model, lens, ids, [], position=-1)
+        band = profiles.workspace_band(model.n_layers, layers)
         middle = {str(l): {w: reports[str(l)]["concepts"][w]["best_rank"]
-                          for w in ("Italy", "Rome")} for l in layers if 12 <= l <= 29}
+                          for w in ("Italy", "Rome")} for l in band}
+        best = {w: min(((r["concepts"][w]["best_rank"], int(l)) for l, r in reports.items()
+                        if r["concepts"][w]["best_rank"] is not None), default=None)
+                for w in ("Italy", "Rome", "euro")}
         return {"prompt": BOOT_PROMPT, "position": -2,
                 "readout_token": tokenizer.decode([ids[0, -2].item()]),
+                "workspace_band": band,
+                "best_rank_and_layer": {w: None if v is None else {"rank": v[0], "layer": v[1]}
+                                        for w, v in best.items()},
                 "upstream_example_layers": [8, 16, 24, 30], "layers": reports,
                 "middle_layer_concept_ranks": middle,
                 "model_at_minus2": describe_logits(final, tokenizer, ["euro"], args.top_k),
@@ -179,17 +190,27 @@ def main():
     parser.add_argument("--rtol", type=float, default=1e-3)
     parser.add_argument("--multihop-data", type=Path,
                         default=Path(__file__).resolve().parents[1] / "data/evaluations/lens-eval-multihop.json")
+    profiles.add_arguments(parser)
     args = parser.parse_args()
     if args.top_k < 1 or args.atol < 0 or args.rtol < 0:
         parser.error("top-k must be positive and tolerances nonnegative")
-    config = AutoConfig.from_pretrained(MODEL, revision=MODEL_REVISION)
+    profile = profiles.resolve(args)
+    if profile.protocol != "qwen_thinking":
+        parser.error("sanity_check.py supports the Qwen thinking profiles only")
+    config = AutoConfig.from_pretrained(profile.model, revision=profile.model_revision)
     text_config = config.get_text_config()
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REVISION)
+    tokenizer = AutoTokenizer.from_pretrained(profile.model, revision=profile.model_revision)
+    try:
+        generation_config = GenerationConfig.from_pretrained(profile.model, revision=profile.model_revision)
+    except OSError:  # Qwen3.5-4B ships no generation_config.json.
+        generation_config = None
     lens = jlens.JacobianLens.from_pretrained(
-        LENS, filename=LENS_FILE, revision=LENS_REVISION
+        profile.lens, filename=profile.lens_file, revision=profile.lens_revision
     )
     if lens.d_model != text_config.hidden_size:
-        raise ValueError("Model and lens residual widths differ")
+        raise ValueError(f"Lens width {lens.d_model} differs from model hidden size {text_config.hidden_size}")
+    if (text_config.hidden_size, text_config.num_hidden_layers) != (profile.width, profile.layers):
+        raise ValueError("Model config dimensions differ from the reviewed profile")
     if not lens.source_layers or any(
         not 0 <= layer < text_config.num_hidden_layers
         or matrix.shape != (lens.d_model, lens.d_model)
@@ -217,10 +238,30 @@ def main():
     }
     if any(len(ids) != 1 for ids in thinking_ids.values()):
         raise ValueError("Thinking delimiters are not single tokens")
+
+    def as_list(value):
+        return [value] if isinstance(value, int) else list(value or [])
+    stop_ids = {"tokenizer_eos_token_id": tokenizer.eos_token_id,
+                "config_eos_token_id": text_config.eos_token_id,
+                "generation_config_eos_token_id": generation_config.eos_token_id
+                if generation_config is not None else "no generation_config.json at this revision"}
+    stop_ids["union"] = sorted({i for v in stop_ids.values() if not isinstance(v, str) for i in as_list(v)})
+    stop_ids["decoded"] = {str(i): tokenizer.convert_ids_to_tokens(i) for i in stop_ids["union"]}
     print(json.dumps({
-        "model_revision": MODEL_REVISION,
-        "lens_revision": LENS_REVISION,
+        "model_config": profiles.CONFIG_NAMES[profile],
+        "model": profile.model,
+        "model_revision": profile.model_revision,
+        "lens": profile.lens,
+        "lens_revision": profile.lens_revision,
+        "lens_ref": profiles.LENS_REFS.get(profile.lens_revision),
+        "lens_file": profile.lens_file,
+        "num_hidden_layers": text_config.num_hidden_layers,
+        "hidden_size": text_config.hidden_size,
+        "lens_width_matches_hidden_size": lens.d_model == text_config.hidden_size,
         "lens_layers": lens.source_layers,
+        "workspace_band": profiles.workspace_band(text_config.num_hidden_layers, lens.source_layers),
+        "workspace_rule": "floor(0.38 * layers) through floor(0.92 * layers), inclusive, fitted lens layers only",
+        "stop_token_ids": stop_ids,
         "d_model": lens.d_model,
         "n_prompts": lens.n_prompts,
         "thinking_ids": thinking_ids,
@@ -238,11 +279,15 @@ def main():
     if args.device == "cuda" and not torch.cuda.is_bf16_supported():
         parser.error("This GPU does not support the requested bfloat16 forward")
 
-    hf = AutoModelForCausalLM.from_pretrained(
-        MODEL, revision=MODEL_REVISION,
-        dtype=torch.bfloat16 if args.device == "cuda" else torch.float32,
-        device_map=args.device,
-    )
+    dtype = "bfloat16" if args.device == "cuda" else "float32"
+    if profile == profiles.QWEN4:  # Unchanged legacy loader for the validated 4B path.
+        hf = AutoModelForCausalLM.from_pretrained(
+            profile.model, revision=profile.model_revision,
+            dtype=getattr(torch, dtype), device_map=args.device,
+        )
+    else:  # Same loader as the paired runner for this profile.
+        hf = profiles.load_hf(profile, args.device, dtype, profiles.loading_mode(profile, args))
+        profiles.validate_lens(profile, hf, lens)
     model = jlens.from_hf(hf, tokenizer, force_bos=False)
     if args.check:
         checks = ["walkthrough", "exact-id", "multihop"] if args.check == "all" else [args.check]

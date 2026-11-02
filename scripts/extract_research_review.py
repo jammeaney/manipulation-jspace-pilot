@@ -19,7 +19,8 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 CONDITIONS = {'neutral', 'covert_persuasion'}
 SPANS = ('response_start', 'cot', 'answer')
-CONCEPTS = ('concealment', 'persuasion', 'eval_awareness')
+# Exported when present in summaries/samples.csv (runs before the placebo group lack it).
+CONCEPTS = ('concealment', 'persuasion', 'eval_awareness', 'placebo')
 JLENS_FILES = ('samples.csv', 'layers.csv', 'layer_comparisons.csv', 'summary.json')
 POLICY = dict(skip_special_tokens=False, clean_up_tokenization_spaces=False)
 
@@ -183,6 +184,16 @@ def write_csv(path, rows, columns):
 
 def write_review(dest, prepared, pins, source):
     dest.mkdir()
+    header = prepared[0][0]
+    concepts = [c for c in CONCEPTS if f'{c}_response_start_workspace_score' in header]
+    # Raw log-probabilities (and the control baseline) sit beside control-adjusted scores when saved.
+    raw = all(f'{c}_response_start_workspace_logprob' in header for c in concepts)
+    def keys(span):
+        result = [(f'{c}_{span}_workspace_score', f'{c}_{span}_delta') for c in concepts]
+        if raw:
+            result += [(f'{c}_{span}_workspace_logprob', f'{c}_{span}_logprob_delta') for c in concepts]
+            result.append((f'control_{span}_workspace_logprob', f'control_{span}_logprob_delta'))
+        return result
     overview, by_scenario, metadata = [], defaultdict(dict), []
     for m, texts, generated, detail in prepared:
         scenario, condition = m['scenario_id'], m['assigned_condition']
@@ -196,8 +207,7 @@ def write_review(dest, prepared, pins, source):
             generated_tokens=m['generated_tokens'], cot_tokens=m['cot_tokens'], answer_tokens=m['answer_tokens'],
             stop_reason=m['stop_reason'], span_valid=m['thinking_span_valid'])
         for span in SPANS:
-            for concept in CONCEPTS:
-                key = f'{concept}_{span}_workspace_score'
+            for key, _ in keys(span):
                 row[key] = m.get(key, '')
         overview.append(row)
         by_scenario[scenario][condition] = row
@@ -210,8 +220,7 @@ def write_review(dest, prepared, pins, source):
         neutral, covert = conditions['neutral'], conditions['covert_persuasion']
         row = dict(scenario=scenario, neutral_cot_tokens=neutral['cot_tokens'], covert_cot_tokens=covert['cot_tokens'])
         for span in SPANS:
-            for concept in CONCEPTS:
-                key = f'{concept}_{span}_workspace_score'
+            for key, delta in keys(span):
                 values = [neutral[key], covert[key]]
                 if any(v == '' for v in values):
                     value = ''
@@ -220,10 +229,10 @@ def write_review(dest, prepared, pins, source):
                     if not all(math.isfinite(v) for v in numbers):
                         raise ValueError(f'Nonfinite score in {scenario}: {key}')
                     value = numbers[1] - numbers[0]
-                row[f'{concept}_{span}_delta'] = value
+                row[delta] = value
         comparisons.append(row)
     columns = ['scenario', 'neutral_cot_tokens', 'covert_cot_tokens'] + [
-        f'{concept}_{span}_delta' for span in SPANS for concept in CONCEPTS]
+        delta for span in SPANS for _, delta in keys(span)]
     write_csv(dest / 'paired_comparisons.csv', comparisons, columns)
     export = dict(schema_version=1, model=pins[0], model_revision=pins[1], tokenizer_revision=pins[2],
         decode_policy=POLICY, samples=metadata, paired_scenarios=len(comparisons),
